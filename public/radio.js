@@ -7,7 +7,7 @@
   var D = window.EscenaDatos;
   var R = D.RADIO;
   var TINTA = "#1C0F16";
-  var ANCHO_BANDA = 3;   // la banda completa mide 3 veces la ventana del dial
+  var ANCHO_BANDA = 2.4; // la banda completa mide 2,4 veces la ventana del dial
 
   function redondeado(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -108,7 +108,7 @@
   // ---------- control en el celular ----------
   function control(op) {
     var st = {
-      lista: [], idx: 0, pos: 0.5, mantenido: 0, arrastre: null,
+      lista: [], idx: 0, pos: 0.5, mantenido: 0, arrastre: null, hechas: [],
       celebrar: 0, ultimo: performance.now(), activo: false
     };
     function actual() { return st.lista[st.idx]; }
@@ -122,6 +122,7 @@
       iniciar: function (seed, idx) {
         st.lista = D.emisoras(seed);
         st.idx = idx || 0;
+        st.hechas = st.lista.slice(0, st.idx);
         st.pos = actual() ? actual().inicio : 0.5;
         st.mantenido = 0; st.celebrar = 0; st.activo = true;
         if (op.cambio) op.cambio(st);
@@ -143,9 +144,11 @@
           if (st.mantenido >= R.MANTENER) {
             var valor = B.min + st.pos * (B.max - B.min);
             if (op.sintonizada) op.sintonizada(st.idx, st.pos, valor);
-            st.celebrar = ahora + 900;
+            st.hechas.push(e);
+            st.celebrar = ahora + 1300;
             st.idx += 1;
             st.mantenido = 0;
+            st.arrastre = null;
             var sig = actual();
             if (sig) st.pos = sig.inicio;
             if (op.cambio) op.cambio(st);
@@ -170,35 +173,74 @@
         ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
         ctx.fillStyle = "#CFA697";
         ctx.font = "600 13px 'IBM Plex Mono', monospace";
-        ctx.fillText(("Busca · " + B.nombre).toUpperCase(), W / 2, caja.y + 34);
+        ctx.fillText(("Emisora " + (st.idx + 1) + " · busca " + B.nombre).toUpperCase(), W / 2, caja.y + 32);
         ctx.fillStyle = "#FBEFE3";
         var fs = Math.min(46, W * 0.11);
         ctx.font = "900 " + Math.round(fs) + "px 'Big Shoulders Display', 'Arial Narrow', sans-serif";
-        ctx.fillText(e.etiqueta.toUpperCase(), W / 2, caja.y + 34 + fs * 1.05);
+        ctx.fillText(e.etiqueta.toUpperCase(), W / 2, caja.y + 32 + fs * 1.05);
 
         // dial
-        var dy = caja.y + 34 + fs * 1.05 + 22;
-        var dh = Math.min(110, H * 0.17);
+        var dy = caja.y + 32 + fs * 1.05 + 20;
+        var dh = Math.min(104, H * 0.16);
         dial(ctx, caja.x + 16, dy, caja.w - 32, dh, e.banda, st.pos);
-        // frecuencia actual
         var actualValor = B.min + st.pos * (B.max - B.min);
         ctx.fillStyle = "#F4CC4E";
         ctx.font = "600 15px 'IBM Plex Mono', monospace";
-        ctx.fillText("Estás en " + formato(e.banda, actualValor) + " " + B.unidad, W / 2, dy + dh + 26);
+        ctx.fillText("Estás en " + formato(e.banda, actualValor) + " " + B.unidad, W / 2, dy + dh + 24);
 
-        // parlante y barras
-        var restoTop = dy + dh + 44, restoH = caja.y + caja.h - restoTop - 20;
-        var r = Math.max(30, Math.min(caja.w * 0.32, restoH * 0.36));
-        parlante(ctx, W / 2, restoTop + r + 6, r, celebrando ? 0 : 1 - cerca, info.t, celebrando);
-        barras(ctx, W / 2 - 60, restoTop + r * 2 + 22, 120, 34, celebrando ? 1 : Math.min(1, cerca + (st.mantenido / R.MANTENER) * 0.2));
-        ctx.fillStyle = celebrando ? "#5BDA9C" : "#CFA697";
-        ctx.font = "700 15px 'Atkinson Hyperlegible', sans-serif";
-        ctx.fillText(celebrando ? "¡Sintonizada! Busca la siguiente" : (D.sintonizada(e, st.pos) ? "¡Ahí está! Mantén el dial quieto" : "Arrastra el dial hasta que se limpie la señal"),
-          W / 2, Math.min(caja.y + caja.h - 16, restoTop + r * 2 + 80));
+        // zona central: parlante y barras, o la celebración
+        var chipsY = caja.y + caja.h - 46;
+        var restoTop = dy + dh + 40, restoH = chipsY - restoTop - 10;
+        var r = Math.max(28, Math.min(caja.w * 0.28, restoH * 0.32));
+        if (celebrando) {
+          var hecha = st.hechas[st.hechas.length - 1];
+          var cy = restoTop + restoH * 0.42;
+          ctx.fillStyle = "rgba(91, 218, 156, .16)";
+          redondeado(ctx, caja.x + 16, restoTop, caja.w - 32, restoH * 0.9, 18); ctx.fill();
+          ctx.fillStyle = "#5BDA9C";
+          ctx.font = "900 " + Math.round(Math.min(52, W * 0.12)) + "px 'Big Shoulders Display', 'Arial Narrow', sans-serif";
+          ctx.fillText("¡SINTONIZADA!", W / 2, cy - 18);
+          ctx.fillStyle = "#FFB547";
+          ctx.font = "900 " + Math.round(Math.min(64, W * 0.15)) + "px 'Big Shoulders Display', 'Arial Narrow', sans-serif";
+          ctx.fillText("+100", W / 2, cy + 46);
+          ctx.fillStyle = "#FBEFE3";
+          ctx.font = "700 15px 'Atkinson Hyperlegible', sans-serif";
+          ctx.fillText(D.BANDAS[hecha.banda].nombre + " · " + hecha.etiqueta, W / 2, cy + 84);
+          ctx.fillStyle = "#CFA697";
+          ctx.fillText("Ahora busca la siguiente ↑", W / 2, cy + 108);
+        } else {
+          parlante(ctx, W / 2, restoTop + r + 4, r, 1 - cerca, info.t, false);
+          barras(ctx, W / 2 - 60, restoTop + r * 2 + 18, 120, 30, Math.min(1, cerca + (st.mantenido / R.MANTENER) * 0.2));
+          var listo = D.sintonizada(e, st.pos);
+          ctx.fillStyle = listo ? "#5BDA9C" : "#CFA697";
+          ctx.font = "700 15px 'Atkinson Hyperlegible', sans-serif";
+          ctx.fillText(listo ? "¡Ahí está! Suelta y no lo muevas" : "Arrastra el dial hasta que se limpie la señal", W / 2, restoTop + r * 2 + 72);
+        }
+
+        // emisoras ya sintonizadas
+        ctx.font = "600 12px 'IBM Plex Mono', monospace";
+        ctx.textAlign = "left";
+        var x = caja.x + 16;
+        ctx.fillStyle = "#CFA697";
+        ctx.fillText(st.hechas.length ? "SINTONIZADAS:" : "AÚN NO SINTONIZAS NINGUNA", x, chipsY + 6);
+        var cx = x;
+        var ultimas = st.hechas.slice(-3);
+        ctx.font = "700 13px 'Atkinson Hyperlegible', sans-serif";
+        ultimas.forEach(function (h) {
+          var texto = "✓ " + h.etiqueta.replace(/^canal \d+ · /, "Wi-Fi ");
+          var w = ctx.measureText(texto).width + 16;
+          if (cx + w > caja.x + caja.w - 12) return;
+          ctx.fillStyle = "rgba(91, 218, 156, .2)";
+          redondeado(ctx, cx, chipsY + 14, w, 22, 11); ctx.fill();
+          ctx.fillStyle = "#5BDA9C";
+          ctx.fillText(texto, cx + 8, chipsY + 30);
+          cx += w + 6;
+        });
+        ctx.textAlign = "center";
       },
       abajo: function (px) { st.arrastre = { x: px, pos: st.pos }; },
       mover: function (px, ancho) {
-        if (!st.arrastre || !st.activo) return;
+        if (!st.arrastre || !st.activo || performance.now() < st.celebrar) return;
         var w = Math.max(200, ancho - 60) * ANCHO_BANDA;
         st.pos = Math.max(0, Math.min(1, st.arrastre.pos - (px - st.arrastre.x) / w));
       },

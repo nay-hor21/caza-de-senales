@@ -37,10 +37,10 @@
 
   var radio = Radio.control({
     cambio: function (st) {
-      $("pie-texto").textContent = st.idx === 1 ? "1 emisora sintonizada" : st.idx + " emisoras sintonizadas";
+      $("pie-texto").textContent = (st.idx === 1 ? "1 emisora sintonizada" : st.idx + " emisoras sintonizadas") + " · +" + fmt(st.idx * 100);
       $("h-puntos").textContent = "+" + fmt(st.idx * 100);
       var e = st.lista[st.idx];
-      if (e) $("h-pregunta").textContent = "Busca " + EscenaDatos.BANDAS[e.banda].nombre + " · " + e.etiqueta;
+      if (e) $("h-pregunta").textContent = "Emisora " + (st.idx + 1) + ": " + EscenaDatos.BANDAS[e.banda].nombre + " · " + e.etiqueta;
     },
     sintonizada: function (idx, pos) {
       Sonido.atrapado(); vibrar(40);

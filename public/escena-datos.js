@@ -206,7 +206,7 @@
   }
 
   // ---------------- Bonus: Sintoniza la emisora ----------------
-  var RADIO = { DURACION: 25, TOLERANCIA: 0.012, MANTENER: 0.45 };
+  var RADIO = { DURACION: 25, TOLERANCIA: 0.02, MANTENER: 0.35 };
   var BANDAS = {
     am: { nombre: "Radio AM", min: 530, max: 1700, unidad: "kHz", dec: 0, marcas: [600, 800, 1000, 1200, 1400, 1600] },
     fm: { nombre: "Radio FM", min: 87.5, max: 108.5, unidad: "MHz", dec: 1, marcas: [88, 92, 96, 100, 104, 108] },
