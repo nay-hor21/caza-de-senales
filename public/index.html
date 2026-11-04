@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0A1F2B">
+<title>Caza de Señales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="/estilos.css">
+</head>
+<body class="jugador">
+<main class="app" id="app">
+
+  <!-- 1. Entrar -->
+  <section id="v-unirse" class="vista">
+    <header class="portada">
+      <svg class="dron-logo" viewBox="0 0 140 110" aria-hidden="true">
+        <g stroke="#2B3A42" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M22 40 H118 M22 40 V28 M118 40 V28"/>
+          <path d="M58 70 L50 84 M82 70 L90 84"/>
+          <path d="M82 34 L92 14"/>
+        </g>
+        <ellipse class="helice" cx="22" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
+        <ellipse class="helice" cx="118" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
+        <rect x="38" y="32" width="64" height="40" rx="15" fill="#FFB547" stroke="#B9822A" stroke-width="3"/>
+        <circle cx="70" cy="52" r="13" fill="#FFFFFF"/>
+        <path d="M64 52 l4 4 l8 -9" stroke="#0A1F2B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="93" cy="12" r="4" fill="#FF3B4E"/>
+      </svg>
+      <p class="eyebrow">Juego en vivo · Antenas</p>
+      <h1>Caza de <span>Señales</span></h1>
+    </header>
+
+    <form id="form-unirse" class="panel form" autocomplete="off">
+      <div class="campo">
+        <label for="pin">PIN del juego</label>
+        <input type="text" id="pin" class="input-pin" inputmode="numeric" maxlength="7" placeholder="000 000">
+      </div>
+      <div class="campo">
+        <label for="nombre">Tu nombre</label>
+        <input type="text" id="nombre" maxlength="14" placeholder="Como quieres aparecer">
+      </div>
+      <button class="btn-principal" type="submit" id="btn-entrar">Entrar</button>
+      <p class="error" id="unirse-error" role="alert" hidden></p>
+    </form>
+    <p class="enlace-host"><a href="/host.html">¿Vas a presentar? Crea la partida aquí</a></p>
+  </section>
+
+  <!-- 2. Esperando -->
+  <section id="v-espera" class="vista centro" hidden>
+    <svg class="mira" id="espera-mira" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" aria-hidden="true">
+      <circle cx="50" cy="50" r="30"/><path d="M50 8v22M50 70v22M8 50h22M70 50h22"/><circle cx="50" cy="50" r="4" fill="currentColor"/>
+    </svg>
+    <h2 id="espera-titulo">¡Estás dentro!</h2>
+    <p class="tu-color" id="espera-color"><i></i><span>Este es tu color de cazador</span></p>
+    <p>Mira el proyector. Cuando empiece, toca el dron que lleva la respuesta correcta. Tienes 3 balas por pregunta.</p>
+    <span class="pin-chip" id="espera-pin"></span>
+  </section>
+
+  <!-- 6. Final -->
+  <section id="v-final" class="vista centro final-j" hidden>
+    <p class="eyebrow">Terminaste en el puesto</p>
+    <p class="grande" id="f-puesto">#1</p>
+    <p id="f-de">de 1 jugadores</p>
+    <dl class="stats">
+      <div><dt>Puntos</dt><dd id="f-puntos">0</dd></div>
+      <div><dt>Aciertos</dt><dd id="f-aciertos">0/0</dd></div>
+      <div><dt>Puntería</dt><dd id="f-punteria">0 %</dd></div>
+    </dl>
+    <button class="btn-sec" id="btn-otra" type="button">Entrar a otra partida</button>
+  </section>
+
+</main>
+
+<!-- 3. Juego -->
+<section id="v-juego" class="juego-j" hidden>
+  <header class="hud-j">
+    <span id="h-ronda">1 / 10</span>
+    <span class="t" id="h-tiempo">20</span>
+    <span id="h-puntos">0 pts</span>
+  </header>
+  <p class="pregunta-j" id="h-pregunta"></p>
+  <ul class="leyenda" id="h-leyenda"></ul>
+  <div class="zona" id="zona">
+    <canvas id="cielo"></canvas>
+    <div class="cuenta" id="cuenta" hidden>
+      <p class="eyebrow" id="cuenta-tipo">Pregunta 1</p>
+      <p class="cuenta-num" id="cuenta-num">3</p>
+      <p class="cuenta-ayuda" id="cuenta-ayuda">Toca el dron con la respuesta correcta</p>
+    </div>
+    <p class="aviso" id="aviso" hidden></p>
+  </div>
+  <footer class="pie-j">
+    <span class="balas" id="balas" aria-label="Balas"></span>
+    <span class="texto" id="pie-texto">Toca el dron con la respuesta correcta</span>
+    <button class="btn-icono" id="btn-sonido" type="button" aria-label="Apagar el sonido">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path id="icono-ondas" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>
+        <path id="icono-mudo" d="M16 9l5 6M21 9l-5 6" hidden/>
+      </svg>
+    </button>
+  </footer>
+</section>
+
+<!-- 4 y 5. Resultado de la ronda -->
+<section id="v-resultado" class="resultado-j" hidden aria-live="polite">
+  <h2 id="r-titulo">¡Le diste!</h2>
+  <p class="grande" id="r-puntos">+0</p>
+  <p class="detalle" id="r-detalle"></p>
+  <p class="era" id="r-era" hidden><span class="marca" id="r-marca">A</span><span id="r-era-texto"></span></p>
+  <p class="puesto-j" id="r-puesto"></p>
+</section>
+
+<p class="conexion" id="conexion" hidden>Reconectando…</p>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/escena-datos.js"></script>
+<script src="/escena.js"></script>
+<script src="/sonido.js"></script>
+<script src="/jugador.js"></script>
+</body>
+</html>

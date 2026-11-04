@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caza de Señales · Proyector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="/estilos.css">
+</head>
+<body class="host">
+<main class="app" id="app">
+
+  <p id="v-cargando" class="nota">Conectando…</p>
+
+  <!-- 1. Crear partida -->
+  <section id="v-config" class="vista config" hidden>
+    <header class="portada">
+      <svg class="dron-logo" viewBox="0 0 140 110" aria-hidden="true">
+        <g stroke="#2B3A42" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M22 40 H118 M22 40 V28 M118 40 V28"/>
+          <path d="M58 70 L50 84 M82 70 L90 84"/>
+          <path d="M82 34 L92 14"/>
+        </g>
+        <ellipse class="helice" cx="22" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
+        <ellipse class="helice" cx="118" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
+        <rect x="38" y="32" width="64" height="40" rx="15" fill="#FFB547" stroke="#B9822A" stroke-width="3"/>
+        <circle cx="70" cy="52" r="13" fill="#FFFFFF"/>
+        <path d="M64 52 l4 4 l8 -9" stroke="#0A1F2B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="93" cy="12" r="4" fill="#FF3B4E"/>
+      </svg>
+      <p class="eyebrow">Proyector · Juego en vivo</p>
+      <h1>Caza de <span>Señales</span></h1>
+      <p class="lead">Los drones vuelan con las respuestas colgadas. Cada compañero apunta desde su celular y tiene 3 balas para derribar el correcto. Entre preguntas hay rondas bonus para cazar interferencias.</p>
+    </header>
+
+    <form id="form-config" class="panel form">
+      <fieldset>
+        <legend>Preguntas</legend>
+        <div class="segmentos">
+          <label><input type="radio" name="cantidad" id="cantidad-10" value="10" checked><span>10 al azar</span></label>
+          <label><input type="radio" name="cantidad" id="cantidad-todas" value="todas"><span>Todas</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Tiempo por pregunta</legend>
+        <div class="segmentos">
+          <label><input type="radio" name="tiempo" id="tiempo-20" value="20" checked><span>20 segundos</span></label>
+          <label><input type="radio" name="tiempo" id="tiempo-30" value="30"><span>30 segundos</span></label>
+        </div>
+      </fieldset>
+      <label class="casilla"><input type="checkbox" id="con-bonus" checked><span>Rondas bonus <small>cada 3 preguntas</small></span></label>
+      <button class="btn-principal" type="submit" id="btn-crear">Crear partida</button>
+    </form>
+
+    <ul class="reglas">
+      <li><b>3 balas</b><span>por pregunta; el primer dron que tocas es tu respuesta</span></li>
+      <li><b>1000</b><span>puntos máximo; más rápido, más puntos</span></li>
+      <li><b>+150</b><span>por cada interferencia dorada en el bonus</span></li>
+    </ul>
+  </section>
+
+  <!-- 2. Sala de espera -->
+  <section id="v-lobby" class="vista" hidden>
+    <div class="lobby">
+      <div class="lobby-unirse panel">
+        <p class="eyebrow">Entra desde el celular</p>
+        <p class="url" id="lobby-url">—</p>
+        <p class="eyebrow">PIN del juego</p>
+        <p class="pin" id="lobby-pin">——— ———</p>
+        <img class="qr" id="lobby-qr" alt="Código QR para entrar a la partida" width="250" height="250">
+        <p class="nota" id="lobby-nota"></p>
+      </div>
+      <div class="lobby-jugadores">
+        <div class="fila-titulo"><h2>Cazadores</h2><span class="contador-grande" id="lobby-cuenta">0</span></div>
+        <ul class="chips" id="lobby-lista"></ul>
+        <p class="vacio" id="lobby-vacio">Esperando jugadores. Escaneen el código o entren a la dirección y escriban el PIN.</p>
+        <button class="btn-principal" id="btn-empezar" type="button" disabled>Empezar la caza</button>
+        <p class="ayuda">Para sacar a alguien de la partida, toca su nombre dos veces.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Podio -->
+  <section id="v-final" class="vista" hidden>
+    <header class="final-cabeza">
+      <p class="eyebrow">Fin de la caza</p>
+      <h2 class="titulo-final">Podio</h2>
+    </header>
+    <div class="podio" id="f-podio"></div>
+    <ul class="premios" id="f-premios"></ul>
+    <ol class="lista-top resto" id="f-resto"></ol>
+    <div class="acciones-host"><button class="btn-sec" id="btn-nueva" type="button">Crear otra partida</button></div>
+  </section>
+
+</main>
+
+<!-- 3. Juego -->
+<section id="v-juego" class="juego-host" hidden>
+  <canvas id="cielo"></canvas>
+  <header class="banda" id="banda">
+    <div class="reloj" id="reloj" aria-hidden="true">
+      <svg viewBox="0 0 100 100"><circle class="pista" cx="50" cy="50" r="44"/><circle class="arco" id="reloj-arco" cx="50" cy="50" r="44"/></svg>
+      <span id="reloj-num">20</span>
+    </div>
+    <div>
+      <p class="eyebrow" id="j-etiqueta">Pregunta 1 de 10</p>
+      <h2 id="j-pregunta">Prepárate…</h2>
+    </div>
+    <div class="banda-info">
+      <span>PIN <b id="j-pin"></b></span>
+      <span id="j-listos"></span>
+    </div>
+  </header>
+
+  <div class="cuenta" id="cuenta" hidden>
+    <p class="eyebrow" id="cuenta-tipo">Pregunta 1</p>
+    <p class="cuenta-num" id="cuenta-num">3</p>
+    <p class="cuenta-ayuda" id="cuenta-ayuda">Derriba el dron con la respuesta correcta</p>
+  </div>
+
+  <aside class="panel-res" id="panel-res" hidden>
+    <div id="res-pregunta">
+      <p class="eyebrow">Respuesta correcta</p>
+      <p class="res-correcta"><span class="marca" id="res-marca">A</span><span id="res-texto"></span></p>
+      <p class="res-exp" id="res-exp"></p>
+      <ul class="votos" id="res-votos"></ul>
+    </div>
+    <div id="res-bonus">
+      <p class="eyebrow">Ronda bonus</p>
+      <p class="titulo-bonus">Mejores cazadores</p>
+    </div>
+    <h3 id="res-top-titulo">Top 5</h3>
+    <ol class="lista-top" id="res-top"></ol>
+    <button class="btn-principal" id="btn-siguiente" type="button">Siguiente ronda</button>
+  </aside>
+
+  <div class="controles">
+    <button class="btn-sec" id="btn-sonido" type="button">Sonido: activado</button>
+    <button class="btn-sec" id="btn-saltar" type="button">Terminar la ronda</button>
+  </div>
+</section>
+
+<p class="conexion" id="conexion" hidden>Reconectando con el servidor…</p>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/escena-datos.js"></script>
+<script src="/escena.js"></script>
+<script src="/sonido.js"></script>
+<script src="/host.js"></script>
+</body>
+</html>
