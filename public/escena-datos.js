@@ -236,7 +236,15 @@
     return Math.abs(posicion - estacion.objetivo) <= RADIO.TOLERANCIA * (holgura || 1);
   }
 
+  // Instrucciones cortas que aparecen durante la cuenta regresiva de cada bonus.
+  var INSTRUCCIONES = {
+    interferencias: { titulo: "Interferencias", pasos: ["Toca los monstruos que cruzan", "Los dorados valen el triple"] },
+    ciudad: { titulo: "Cubre la ciudad", pasos: ["Elige una antena abajo", "Toca el mapa y arrastra para apuntar", "Cubre toda la ciudad con 4 antenas"] },
+    radio: { titulo: "Sintoniza la emisora", pasos: ["Arrastra el dial a la frecuencia", "Sin estática: quédate quieto", "Sintoniza todas las que puedas"] }
+  };
+
   return {
+    INSTRUCCIONES: INSTRUCCIONES,
     DURACION_BONUS: DURACION_BONUS,
     SUBIDA: SUBIDA,
     CAJA: CAJA,

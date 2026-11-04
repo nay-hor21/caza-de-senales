@@ -4,13 +4,15 @@ Un juego de cacería en vivo con estilo de atardecer retro. En el proyector y en
 
 - Quien acierta gana de 500 a 1000 puntos, según qué tan rápido dispare. Cada acierto seguido suma 100 puntos extra, hasta +500.
 - Al revelar la respuesta, los drones equivocados se escapan y el correcto cae. Torri, la torrecita mascota, sale del pasto con el dron en la mano. Si nadie le atinó, se ríe.
+- Cada partida tiene **20 rondas**: 15 preguntas y 5 bonus, unos 12 minutos. Si desactivas los bonus, son 20 preguntas.
+- Antes de cada bonus hay 6 segundos con 2 o 3 pasos cortos que explican qué hacer.
 - Cada 3 preguntas hay una **ronda bonus**, y se van turnando tres tipos:
   - **Interferencias** (15 s): cruzan el cielo monstruos de interferencia que hay que derribar. Cada uno vale 50 puntos, y los dorados, 150.
   - **Cubre la ciudad** (35 s): cada jugador coloca 4 antenas en un mapa. La omnidireccional cubre 360° de cerca, la sectorial cubre 120° y se apunta, y la parabólica hace un enlace punto a punto, la única forma de llegar al pueblo tras la montaña. Gana más quien cubra más población: 8 puntos por cada 1 %. Al final, las interferencias entran por las zonas sin señal.
   - **Sintoniza la emisora** (25 s): hay que girar el dial de una radio hasta encontrar emisoras de AM, FM y Wi-Fi. La estática baja a medida que te acercas. Cada emisora vale 100 puntos.
 - Al final aparece un podio con premios a la mejor puntería, al cazador de interferencias, a la mejor cobertura y a la mejor racha.
 
-Incluye 26 preguntas, repartidas entre los tres temas de la exposición: fundamentos, tipos de antenas, y potencia, conectores y aplicaciones.
+Incluye 26 preguntas en el banco (en cada partida salen 15 al azar), repartidas entre los tres temas de la exposición: fundamentos, tipos de antenas, y potencia, conectores y aplicaciones.
 
 | | Opción A · En internet | Opción B · En tu computadora |
 |---|---|---|
@@ -77,7 +79,7 @@ Para detenerlo, presiona `Ctrl + C`.
 - **Atajos del presentador:** la barra espaciadora o Enter pasan a la siguiente ronda. El botón **Terminar la ronda** corta el tiempo.
 - **Sacar a un jugador:** en la sala de espera, toca su nombre dos veces.
 - **Reconexión:** si un celular se bloquea o se recarga, el jugador vuelve con sus puntos y sus balas. Si el proyector se recarga, la partida también se recupera.
-- **Partidas cortas:** desactiva **Rondas bonus** al crear la partida para jugar solo con preguntas.
+- **Sin bonus:** desactiva **Rondas bonus** al crear la partida para jugar 20 preguntas seguidas.
 
 ## Cambiar o agregar preguntas
 

@@ -57,13 +57,7 @@
     </header>
 
     <form id="form-config" class="panel form">
-      <fieldset>
-        <legend>Preguntas</legend>
-        <div class="segmentos">
-          <label><input type="radio" name="cantidad" id="cantidad-10" value="10" checked><span>10 al azar</span></label>
-          <label><input type="radio" name="cantidad" id="cantidad-todas" value="todas"><span>Todas</span></label>
-        </div>
-      </fieldset>
+      <p class="resumen-rondas"><b>20 rondas</b> <span id="resumen-rondas">15 preguntas y 5 bonus · unos 12 minutos</span></p>
       <fieldset>
         <legend>Tiempo por pregunta</legend>
         <div class="segmentos">
@@ -76,8 +70,8 @@
     </form>
 
     <ul class="reglas">
+      <li><b>20 rondas</b><span>3 preguntas, luego un bonus, y así hasta el final</span></li>
       <li><b>3 balas</b><span>por pregunta; el primer dron que tocas es tu respuesta</span></li>
-      <li><b>1000</b><span>puntos máximo; más rápido, más puntos</span></li>
       <li><b>3 bonus</b><span>interferencias, cubrir la ciudad y sintonizar emisoras</span></li>
     </ul>
   </section>
@@ -139,6 +133,7 @@
     <p class="eyebrow" id="cuenta-tipo">Pregunta 1</p>
     <p class="cuenta-num" id="cuenta-num">3</p>
     <p class="cuenta-ayuda" id="cuenta-ayuda">Derriba el dron con la respuesta correcta</p>
+    <ol class="cuenta-pasos" id="cuenta-pasos" hidden></ol>
   </div>
 
   <aside class="panel-res" id="panel-res" hidden>

@@ -94,14 +94,21 @@
   $("form-config").addEventListener("submit", function (e) {
     e.preventDefault();
     Sonido.desbloquear();
-    var cantidad = $("cantidad-todas").checked ? "todas" : "10";
     var tiempo = $("tiempo-30").checked ? 30 : 20;
     $("btn-crear").disabled = true;
-    socket.emit("host:crear", { cantidad: cantidad, tiempo: tiempo, bonus: $("con-bonus").checked }, function (r) {
+    socket.emit("host:crear", { tiempo: tiempo, bonus: $("con-bonus").checked }, function (r) {
       $("btn-crear").disabled = false;
       if (r && r.ok) { sesion = { pin: r.pin, claveHost: r.claveHost }; guardarSesion(sesion); }
     });
   });
+  function resumenRondas() {
+    var conBonus = $("con-bonus").checked;
+    var minutos = (conBonus ? 12 : 13) + ($("tiempo-30").checked ? 3 : 0);
+    $("resumen-rondas").textContent = (conBonus ? "15 preguntas y 5 bonus" : "20 preguntas, sin bonus") + " · unos " + minutos + " minutos";
+  }
+  ["con-bonus", "tiempo-20", "tiempo-30"].forEach(function (id) { $(id).addEventListener("change", resumenRondas); });
+  resumenRondas();
+
   $("btn-empezar").addEventListener("click", function () { Sonido.desbloquear(); socket.emit("host:empezar"); });
   $("btn-saltar").addEventListener("click", function () { socket.emit("host:saltar"); });
   $("btn-siguiente").addEventListener("click", function () { socket.emit("host:siguiente"); });
@@ -222,7 +229,23 @@
   };
 
   function etiquetaRonda(r) {
-    return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : INFO_BONUS[r.modo].nombre;
+    var ronda = "Ronda " + (estado.indice + 1) + " de " + estado.totalRondas + " · ";
+    return ronda + (r.tipo === "pregunta" ? "Pregunta" : "Bonus · " + EscenaDatos.INSTRUCCIONES[r.modo].titulo);
+  }
+
+  // Durante la cuenta regresiva de un bonus, 2 o 3 pasos cortos.
+  function pintarPasos(r) {
+    var ol = $("cuenta-pasos");
+    var info = r.tipo === "bonus" ? EscenaDatos.INSTRUCCIONES[r.modo] : null;
+    ol.textContent = "";
+    ol.hidden = !info;
+    $("cuenta").classList.toggle("con-pasos", Boolean(info));
+    if (!info) return;
+    info.pasos.forEach(function (p) {
+      var li = document.createElement("li");
+      li.textContent = p;
+      ol.appendChild(li);
+    });
   }
 
   // Área del cielo que queda libre a la izquierda del panel lateral.
@@ -314,14 +337,15 @@
         $("panel-vivo").hidden = true;
         $("btn-saltar").hidden = true;
         $("j-pregunta").textContent = esPregunta ? "Prepárate…" : INFO_BONUS[r.modo].banda;
-        $("cuenta-tipo").textContent = etiquetaRonda(r);
-        $("cuenta-ayuda").textContent = esPregunta ? "Derriba el dron que lleva la respuesta correcta" : INFO_BONUS[r.modo].ayuda;
+        $("cuenta-tipo").textContent = "Ronda " + (estado.indice + 1) + " de " + estado.totalRondas + (esPregunta ? " · Pregunta" : " · Bonus");
+        $("cuenta-ayuda").textContent = esPregunta ? "Derriba el dron que lleva la respuesta correcta" : EscenaDatos.INSTRUCCIONES[r.modo].titulo + " · desde tu celular";
+        pintarPasos(r);
         $("cuenta").hidden = false;
         pintarReloj(r.duracionMs, r.duracionMs);
         iniciarCuenta(estado.restanteMs);
         ajustarBanda();
       }
-      $("j-listos").textContent = estado.conectados + " cazadores";
+      $("j-listos").textContent = estado.conectados + (estado.conectados === 1 ? " cazador" : " cazadores");
       return;
     }
 
@@ -361,7 +385,7 @@
       if (libre) pintarVivo(r);
       $("j-listos").textContent = esPregunta
         ? estado.respondieron + " de " + estado.conectados + " dispararon"
-        : estado.conectados + " cazadores";
+        : estado.conectados + (estado.conectados === 1 ? " cazador" : " cazadores");
       return;
     }
 

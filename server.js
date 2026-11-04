@@ -15,6 +15,8 @@ const PUERTO = Number(process.env.PORT) || 3000;
 const MAX_JUGADORES = 60;
 const BALAS = 3;
 const SEG_PREPARAR = 3;
+const SEG_PREPARAR_BONUS = 6;   // un poco más, para leer las instrucciones
+const TOTAL_RONDAS = 20;        // preguntas + bonus
 const SEG_BONUS = { interferencias: ED.DURACION_BONUS, ciudad: ED.CIUDAD.DURACION, radio: ED.RADIO.DURACION };
 const MODOS_BONUS = ["interferencias", "ciudad", "radio"];
 const PUNTOS_ESTACION = 100;
@@ -97,19 +99,15 @@ const partidas = new Map();
 function crearPartida(ajustes) {
   const tiempo = [20, 30].includes(Number(ajustes.tiempo)) ? Number(ajustes.tiempo) : 20;
   const conBonus = ajustes.bonus !== false;
+  // 20 rondas: con bonus, 3 preguntas y luego 1 bonus (15 preguntas + 5 bonus); sin bonus, 20 preguntas.
   const seleccion = barajar(PREGUNTAS);
-  const cantidad = ajustes.cantidad === "todas"
-    ? seleccion.length
-    : Math.max(1, Math.min(Number(ajustes.cantidad) || 10, seleccion.length));
-  const preguntas = seleccion.slice(0, cantidad).map((p) => {
-    const orden = barajar([0, 1, 2, 3]);
-    return { q: p.q, exp: p.exp, ops: orden.map((k) => p.ops[k]), correcta: orden.indexOf(0) };
-  });
   const rondas = [];
-  let bonus = 0;
-  preguntas.forEach((p, i) => {
-    rondas.push({ tipo: "pregunta", p, numero: i + 1, seed: nuevaSemilla() });
-    if (conBonus && (i + 1) % 3 === 0 && i < preguntas.length - 1) {
+  let bonus = 0, numero = 0;
+  while (rondas.length < TOTAL_RONDAS && numero < seleccion.length) {
+    const p = seleccion[numero++];
+    const orden = barajar([0, 1, 2, 3]);
+    rondas.push({ tipo: "pregunta", numero, seed: nuevaSemilla(), p: { q: p.q, exp: p.exp, ops: orden.map((k) => p.ops[k]), correcta: orden.indexOf(0) } });
+    if (conBonus && numero % 3 === 0 && rondas.length < TOTAL_RONDAS) {
       const modo = MODOS_BONUS[bonus++ % MODOS_BONUS.length];
       const seed = nuevaSemilla();
       const ronda = { tipo: "bonus", modo, seed };
@@ -117,7 +115,8 @@ function crearPartida(ajustes) {
       if (modo === "radio") ronda.emisoras = ED.emisoras(seed);
       rondas.push(ronda);
     }
-  });
+  }
+  const preguntas = rondas.filter((r) => r.tipo === "pregunta");
   const partida = {
     pin: nuevoPin(),
     claveHost: nuevaClave(),
@@ -240,6 +239,8 @@ function estadoJugador(partida, jugador, lista) {
     puesto: lista.indexOf(jugador) + 1,
     totalJugadores: lista.length,
     totalPreguntas: partida.totalPreguntas,
+    indice: partida.indice,
+    totalRondas: partida.rondas.length,
     ronda: infoRonda(partida),
     restanteMs: restanteMs(partida),
     pregunta: r && r.tipo === "pregunta" && enJuego ? { q: r.p.q, ops: r.p.ops } : null,
@@ -287,12 +288,13 @@ function empezarRonda(partida) {
   partida.indice += 1;
   if (partida.indice >= partida.rondas.length) return terminar(partida);
   partida.fase = "preparar";
-  partida.finPreparar = Date.now() + SEG_PREPARAR * 1000;
+  const prep = rondaActual(partida).tipo === "bonus" ? SEG_PREPARAR_BONUS : SEG_PREPARAR;
+  partida.finPreparar = Date.now() + prep * 1000;
   partida.distribucion = [0, 0, 0, 0];
   partida.acertaron = 0;
   for (const j of partida.jugadores.values()) j.ronda = rondaVacia();
   const indice = partida.indice;
-  partida.temporizador = setTimeout(() => iniciarJuego(partida, indice), SEG_PREPARAR * 1000);
+  partida.temporizador = setTimeout(() => iniciarJuego(partida, indice), prep * 1000);
   difundir(partida);
 }
 

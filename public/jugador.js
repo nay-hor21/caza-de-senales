@@ -206,12 +206,21 @@
   }
 
   var NOMBRE_BONUS = { interferencias: "Bonus · Interferencias", ciudad: "Bonus · Cubre la ciudad", radio: "Bonus · Sintoniza la emisora" };
-  var AYUDA_BONUS = {
-    interferencias: "Toca todas las interferencias que puedas",
-    ciudad: "Pon 4 antenas y dale señal a toda la ciudad",
-    radio: "Gira el dial hasta que se limpie la señal"
-  };
-  function etiquetaRonda(r) { return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : NOMBRE_BONUS[r.modo]; }
+  function etiquetaRonda(r) { return "Ronda " + (estado.indice + 1) + " de " + estado.totalRondas + (r.tipo === "pregunta" ? "" : " · Bonus"); }
+
+  function pintarPasos(r) {
+    var ol = $("cuenta-pasos");
+    var info = r.tipo === "bonus" ? EscenaDatos.INSTRUCCIONES[r.modo] : null;
+    ol.textContent = "";
+    ol.hidden = !info;
+    $("cuenta").classList.toggle("con-pasos", Boolean(info));
+    if (!info) return;
+    info.pasos.forEach(function (p) {
+      var li = document.createElement("li");
+      li.textContent = p;
+      ol.appendChild(li);
+    });
+  }
 
   function mostrarControles(modo) {
     modoBonus = modo;
@@ -223,7 +232,7 @@
 
   function pintarJuego() {
     var r = estado.ronda;
-    $("h-ronda").textContent = r.tipo === "pregunta" ? r.numero + " / " + estado.totalPreguntas : "Bonus";
+    $("h-ronda").textContent = (estado.indice + 1) + " / " + estado.totalRondas;
     var modo = r.tipo === "pregunta" ? null : r.modo;
     $("h-puntos").textContent = fmt(estado.puntos) + " pts";
 
@@ -239,7 +248,10 @@
         $("h-leyenda").hidden = true;
         $("h-pregunta").textContent = r.tipo === "pregunta" ? "Prepárate…" : "¡" + NOMBRE_BONUS[modo].replace("Bonus · ", "") + "!";
         $("cuenta-tipo").textContent = etiquetaRonda(r);
-        $("cuenta-ayuda").textContent = r.tipo === "pregunta" ? "Toca el dron con la respuesta correcta" : AYUDA_BONUS[modo];
+        $("cuenta-ayuda").textContent = r.tipo === "pregunta" ? "Toca el dron con la respuesta correcta" : EscenaDatos.INSTRUCCIONES[modo].titulo;
+        pintarPasos(r);
+        if (modo === "ciudad") $("pie-texto").textContent = "Prepárate: elige tu primera antena";
+        else if (modo === "radio") $("pie-texto").textContent = "Prepárate para girar el dial";
         $("cuenta").hidden = false;
         $("h-tiempo").textContent = Math.round(r.duracionMs / 1000);
         $("h-tiempo").classList.remove("urgente");
@@ -267,7 +279,7 @@
         else if (balas <= 0) avisar("Sin balas. Espera el resultado");
       } else if (modo === "ciudad") {
         $("h-leyenda").hidden = true;
-        $("h-pregunta").textContent = "Toca para poner una antena, arrastra para apuntarla y toca una antena para quitarla";
+        $("h-pregunta").textContent = "Toca para poner · arrastra para apuntar · toca otra vez para quitar";
         escena.libre({ clave: r.clave, transcurridoMs: transcurrido, capa: function (ctx, info) { ciudad.dibujar(ctx, info); } });
         ciudad.iniciar(r.seed, estado.bonus ? estado.bonus.antenas : []);
         elegirHerramienta(ciudad.estado.herramienta);

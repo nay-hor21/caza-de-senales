@@ -427,3 +427,26 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pie-ciudad .texto { order: -1; flex-basis: 100%; text-align: center; font-family: var(--mono); color: var(--fg); }
 .dial-botones { display: flex; gap: 8px; }
 .dial-botones .btn-icono { width: 48px; height: 44px; font-size: 1.1rem; }
+
+/* =================== INSTRUCCIONES DE LOS BONUS =================== */
+.resumen-rondas { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 14px; border-radius: 10px; background: var(--ink); border: 1px solid var(--line); }
+.resumen-rondas b { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1; color: var(--signal); text-transform: uppercase; }
+.resumen-rondas span { color: var(--muted); }
+.cuenta.con-pasos .cuenta-num { font-size: clamp(4.5rem, 12vw, 8.5rem); }
+.cuenta-pasos {
+  list-style: none; margin: 4px 0 0; padding: 14px 20px; counter-reset: paso;
+  display: flex; flex-direction: column; gap: 8px; max-width: min(92%, 680px);
+  background: rgba(251, 239, 227, .95); color: var(--ink); border-radius: 16px; text-align: left; text-shadow: none;
+  box-shadow: 0 10px 30px rgba(28, 15, 22, .3);
+}
+.cuenta-pasos li {
+  counter-increment: paso; display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 10px; align-items: center;
+  font-weight: 700; font-size: clamp(1.05rem, 1.9vw, 1.6rem); line-height: 1.25;
+}
+.cuenta-pasos li::before {
+  content: counter(paso); display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%;
+  background: var(--sunset); color: #FFFFFF; font-family: var(--mono); font-size: .8em;
+}
+.zona .cuenta.con-pasos .cuenta-num { font-size: clamp(4rem, 22vw, 6rem); }
+.zona .cuenta-pasos { padding: 12px 14px; gap: 7px; }
+.zona .cuenta-pasos li { font-size: .98rem; gap: 8px; }
