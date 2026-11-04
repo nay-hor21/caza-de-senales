@@ -15,7 +15,10 @@ const PUERTO = Number(process.env.PORT) || 3000;
 const MAX_JUGADORES = 60;
 const BALAS = 3;
 const SEG_PREPARAR = 3;
-const SEG_BONUS = ED.DURACION_BONUS;
+const SEG_BONUS = { interferencias: ED.DURACION_BONUS, ciudad: ED.CIUDAD.DURACION, radio: ED.RADIO.DURACION };
+const MODOS_BONUS = ["interferencias", "ciudad", "radio"];
+const PUNTOS_ESTACION = 100;
+const PUNTOS_COBERTURA = 8; // por cada punto de porcentaje
 const HORAS_INACTIVIDAD = 3;
 const PALETA = ["#FF5D73", "#3DDC97", "#FFB547", "#4EA8FF", "#C77DFF", "#FF8C42", "#2EC4B6", "#F15BB5", "#A0E426", "#9B8CFF", "#FFD166", "#06D6A0"];
 
@@ -103,9 +106,17 @@ function crearPartida(ajustes) {
     return { q: p.q, exp: p.exp, ops: orden.map((k) => p.ops[k]), correcta: orden.indexOf(0) };
   });
   const rondas = [];
+  let bonus = 0;
   preguntas.forEach((p, i) => {
     rondas.push({ tipo: "pregunta", p, numero: i + 1, seed: nuevaSemilla() });
-    if (conBonus && (i + 1) % 3 === 0 && i < preguntas.length - 1) rondas.push({ tipo: "bonus", seed: nuevaSemilla() });
+    if (conBonus && (i + 1) % 3 === 0 && i < preguntas.length - 1) {
+      const modo = MODOS_BONUS[bonus++ % MODOS_BONUS.length];
+      const seed = nuevaSemilla();
+      const ronda = { tipo: "bonus", modo, seed };
+      if (modo === "ciudad") ronda.mapa = ED.ciudadMapa(seed);
+      if (modo === "radio") ronda.emisoras = ED.emisoras(seed);
+      rondas.push(ronda);
+    }
   });
   const partida = {
     pin: nuevoPin(),
@@ -124,6 +135,8 @@ function crearPartida(ajustes) {
     acertaron: 0,
     interferencias: [],
     bonusTop: [],
+    mejorCiudad: null,
+    hostPendiente: null,
     premios: null,
     ultimaActividad: Date.now()
   };
@@ -132,11 +145,14 @@ function crearPartida(ajustes) {
 }
 
 function rondaVacia() {
-  return { balas: BALAS, respuesta: null, bonusHits: new Set(), bonusPuntos: 0, ultimoDisparo: 0 };
+  return {
+    balas: BALAS, respuesta: null, bonusHits: new Set(), bonusPuntos: 0, ultimoDisparo: 0,
+    antenas: [], cobertura: 0, emisoras: 0, ultimaSintonia: 0
+  };
 }
 
 function rondaActual(partida) { return partida.rondas[partida.indice] || null; }
-function duracionMs(ronda, partida) { return ronda && ronda.tipo === "bonus" ? SEG_BONUS * 1000 : partida.tiempo * 1000; }
+function duracionMs(ronda, partida) { return ronda && ronda.tipo === "bonus" ? SEG_BONUS[ronda.modo] * 1000 : partida.tiempo * 1000; }
 
 function ranking(partida) {
   return [...partida.jugadores.values()].sort((a, b) => b.puntos - a.puntos || a.unidoEn - b.unidoEn);
@@ -155,6 +171,7 @@ function infoRonda(partida) {
   return {
     clave: partida.pin + ":" + partida.indice,
     tipo: r.tipo,
+    modo: r.modo || null,
     numero: r.numero || null,
     seed: r.seed,
     nivel: r.numero ? r.numero - 1 : 0,
@@ -168,6 +185,14 @@ function listos(partida) {
     conectados: conectados.length,
     respondieron: conectados.filter((j) => j.ronda.respuesta || j.ronda.balas <= 0).length
   };
+}
+
+// Lo que cada jugador lleva en un bonus de ciudad o radio (para el ranking en vivo).
+function valorBonus(r, j) {
+  if (!r || r.tipo !== "bonus") return 0;
+  if (r.modo === "ciudad") return j.ronda.cobertura;
+  if (r.modo === "radio") return j.ronda.emisoras;
+  return j.ronda.bonusHits.size;
 }
 
 function estadoHost(partida) {
@@ -191,7 +216,11 @@ function estadoHost(partida) {
     resultado: r && r.tipo === "pregunta" && partida.fase === "resultado"
       ? { correcta: r.p.correcta, distribucion: partida.distribucion, exp: r.p.exp, acertaron: partida.acertaron }
       : null,
-    bonus: r && r.tipo === "bonus" && partida.fase === "resultado" ? { top: partida.bonusTop } : null,
+    vivo: r && r.tipo === "bonus" && r.modo !== "interferencias" && partida.fase === "jugar"
+      ? [...partida.jugadores.values()].map((j) => ({ nombre: j.nombre, color: j.color, valor: valorBonus(r, j) }))
+        .sort((a, b) => b.valor - a.valor).slice(0, 8)
+      : null,
+    bonus: r && r.tipo === "bonus" && partida.fase === "resultado" ? { modo: r.modo, top: partida.bonusTop, mejor: r.modo === "ciudad" ? partida.mejorCiudad : null } : null,
     premios: partida.fase === "final" ? partida.premios : null
   };
 }
@@ -216,7 +245,9 @@ function estadoJugador(partida, jugador, lista) {
     pregunta: r && r.tipo === "pregunta" && enJuego ? { q: r.p.q, ops: r.p.ops } : null,
     balas: jugador.ronda.balas,
     respuesta: jugador.ronda.respuesta ? jugador.ronda.respuesta.dron : null,
-    bonus: r && r.tipo === "bonus" && enJuego ? { hits: [...jugador.ronda.bonusHits], puntos: jugador.ronda.bonusPuntos } : null,
+    bonus: r && r.tipo === "bonus" && enJuego
+      ? { hits: [...jugador.ronda.bonusHits], puntos: jugador.ronda.bonusPuntos, antenas: jugador.ronda.antenas, cobertura: jugador.ronda.cobertura, emisoras: jugador.ronda.emisoras }
+      : null,
     resultado: partida.fase === "resultado" && jugador.ultimo
       ? Object.assign({}, jugador.ultimo, r && r.tipo === "pregunta" ? { correcta: r.p.correcta, correctaTexto: r.p.ops[r.p.correcta] } : {})
       : null,
@@ -228,6 +259,11 @@ function estadoJugador(partida, jugador, lista) {
 
 function enviarAlHost(partida) {
   io.to("host:" + partida.pin).emit("estado", estadoHost(partida));
+}
+
+function enviarAlHostPronto(partida) {
+  if (partida.hostPendiente) return;
+  partida.hostPendiente = setTimeout(() => { partida.hostPendiente = null; enviarAlHost(partida); }, 250);
 }
 
 function enviarAJugador(partida, jugador) {
@@ -265,7 +301,7 @@ function iniciarJuego(partida, indice) {
   const r = rondaActual(partida);
   partida.fase = "jugar";
   partida.inicio = Date.now();
-  partida.interferencias = r.tipo === "bonus" ? ED.interferencias(r.seed, SEG_BONUS) : [];
+  partida.interferencias = r.tipo === "bonus" && r.modo === "interferencias" ? ED.interferencias(r.seed, SEG_BONUS.interferencias) : [];
   partida.temporizador = setTimeout(() => revelar(partida, indice), duracionMs(r, partida) + 400);
   difundir(partida);
 }
@@ -291,17 +327,40 @@ function revelar(partida, indice) {
         j.ultimo = { tipo: "pregunta", acierto: false, disparo: Boolean(resp), sinBalas: !resp && j.ronda.balas <= 0, ganados: 0, bono: 0, racha: 0 };
       }
     }
+  } else if (r.modo === "ciudad") {
+    let mejor = null;
+    for (const j of partida.jugadores.values()) {
+      const pct = j.ronda.cobertura;
+      const ganados = Math.round(pct * PUNTOS_COBERTURA);
+      j.puntos += ganados;
+      j.mejorCobertura = Math.max(j.mejorCobertura, pct);
+      j.ultimo = { tipo: "bonus", modo: "ciudad", valor: pct, antenas: j.ronda.antenas.length, ganados };
+      if (j.ronda.antenas.length && (!mejor || pct > mejor.pct)) mejor = { nombre: j.nombre, color: j.color, pct, antenas: j.ronda.antenas };
+    }
+    partida.mejorCiudad = mejor;
+    partida.bonusTop = topBonus(partida, (j) => j.ronda.cobertura, (j) => Math.round(j.ronda.cobertura * PUNTOS_COBERTURA));
+  } else if (r.modo === "radio") {
+    for (const j of partida.jugadores.values()) {
+      const ganados = j.ronda.emisoras * PUNTOS_ESTACION;
+      j.puntos += ganados;
+      j.ultimo = { tipo: "bonus", modo: "radio", valor: j.ronda.emisoras, ganados };
+    }
+    partida.bonusTop = topBonus(partida, (j) => j.ronda.emisoras, (j) => j.ronda.emisoras * PUNTOS_ESTACION);
   } else {
     for (const j of partida.jugadores.values()) {
-      j.ultimo = { tipo: "bonus", hits: j.ronda.bonusHits.size, ganados: j.ronda.bonusPuntos };
+      j.ultimo = { tipo: "bonus", modo: "interferencias", valor: j.ronda.bonusHits.size, hits: j.ronda.bonusHits.size, ganados: j.ronda.bonusPuntos };
     }
-    partida.bonusTop = [...partida.jugadores.values()]
-      .filter((j) => j.ronda.bonusHits.size > 0)
-      .sort((a, b) => b.ronda.bonusPuntos - a.ronda.bonusPuntos || b.ronda.bonusHits.size - a.ronda.bonusHits.size)
-      .slice(0, 5)
-      .map((j) => ({ nombre: j.nombre, color: j.color, hits: j.ronda.bonusHits.size, ganados: j.ronda.bonusPuntos }));
+    partida.bonusTop = topBonus(partida, (j) => j.ronda.bonusHits.size, (j) => j.ronda.bonusPuntos);
   }
   difundir(partida);
+}
+
+function topBonus(partida, valor, ganados) {
+  return [...partida.jugadores.values()]
+    .filter((j) => valor(j) > 0)
+    .sort((a, b) => ganados(b) - ganados(a) || valor(b) - valor(a))
+    .slice(0, 5)
+    .map((j) => ({ nombre: j.nombre, color: j.color, valor: valor(j), ganados: ganados(j) }));
 }
 
 function premio(lista, valor, minimo) {
@@ -321,6 +380,7 @@ function terminar(partida) {
   partida.premios = {
     punteria: premio(lista, (j) => (j.disparos >= 4 ? Math.round(100 * j.impactos / j.disparos) : null), 1),
     cazador: premio(lista, (j) => j.bonusTotal, 1),
+    cobertura: premio(lista, (j) => j.mejorCobertura, 1),
     racha: premio(lista, (j) => j.mejorRacha, 2)
   };
   difundir(partida);
@@ -417,7 +477,7 @@ io.on("connection", (socket) => {
       if (repetido) return responderAck(ack, { ok: false, error: "Ese nombre ya está en uso. Prueba con otro." });
       jugador = {
         clave: nuevaClave(), nombre, color: PALETA[partida.colores++ % PALETA.length],
-        puntos: 0, racha: 0, mejorRacha: 0, aciertos: 0, disparos: 0, impactos: 0, bonusTotal: 0,
+        puntos: 0, racha: 0, mejorRacha: 0, aciertos: 0, disparos: 0, impactos: 0, bonusTotal: 0, mejorCobertura: 0,
         ronda: rondaVacia(), ultimo: null, conectado: true, socketId: socket.id, unidoEn: Date.now()
       };
       partida.jugadores.set(jugador.clave, jugador);
@@ -469,7 +529,7 @@ io.on("connection", (socket) => {
         clearTimeout(partida.temporizador);
         partida.temporizador = setTimeout(() => revelar(partida, indice), 700);
       }
-    } else {
+    } else if (r.modo === "interferencias") {
       jugador.disparos += 1;
       let valor = 0;
       const id = Number.isInteger(datos.id) ? datos.id : null;
@@ -485,7 +545,48 @@ io.on("connection", (socket) => {
       }
       io.to("host:" + partida.pin).emit("disparo", Object.assign(marca, { tipo: valor ? "bonus" : "fallo", valor }));
       responderAck(ack, { ok: true, valor, puntos: jugador.ronda.bonusPuntos });
+    } else {
+      responderAck(ack, { ok: false });
     }
+  });
+
+  // ----- bonus: Cubre la ciudad -----
+  socket.on("jugador:ciudad", (datos, ack) => {
+    const ctx = jugadorDe(socket);
+    if (!ctx) return responderAck(ack, { ok: false });
+    const { partida, jugador } = ctx;
+    const r = rondaActual(partida);
+    if (partida.fase !== "jugar" || !r || r.modo !== "ciudad") return responderAck(ack, { ok: false });
+    const lista = Array.isArray(datos && datos.antenas) ? datos.antenas : [];
+    const antenas = lista.slice(0, ED.CIUDAD.MAX_ANTENAS)
+      .map((a) => ({ t: String(a && a.t), x: Number(a && a.x), y: Number(a && a.y), a: Number(a && a.a) }))
+      .filter(ED.antenaValida);
+    const res = ED.cobertura(r.mapa, antenas);
+    jugador.ronda.antenas = res.antenas;
+    jugador.ronda.cobertura = res.pct;
+    responderAck(ack, { ok: true, pct: res.pct });
+    enviarAlHostPronto(partida);
+  });
+
+  // ----- bonus: Sintoniza la emisora -----
+  socket.on("jugador:sintonia", (datos, ack) => {
+    const ctx = jugadorDe(socket);
+    if (!ctx) return responderAck(ack, { ok: false });
+    const { partida, jugador } = ctx;
+    const r = rondaActual(partida);
+    if (partida.fase !== "jugar" || !r || r.modo !== "radio") return responderAck(ack, { ok: false });
+    const ahora = Date.now();
+    const idx = Number(datos && datos.idx);
+    const pos = Number(datos && datos.pos);
+    const estacion = r.emisoras[jugador.ronda.emisoras];
+    if (idx !== jugador.ronda.emisoras || !estacion || !Number.isFinite(pos) || ahora - jugador.ronda.ultimaSintonia < 500 ||
+        ahora - partida.inicio > duracionMs(r, partida) + 500 || !ED.sintonizada(estacion, pos, 1.6)) {
+      return responderAck(ack, { ok: false, emisoras: jugador.ronda.emisoras });
+    }
+    jugador.ronda.emisoras += 1;
+    jugador.ronda.ultimaSintonia = ahora;
+    responderAck(ack, { ok: true, emisoras: jugador.ronda.emisoras });
+    enviarAlHostPronto(partida);
   });
 
   socket.on("disconnect", () => {

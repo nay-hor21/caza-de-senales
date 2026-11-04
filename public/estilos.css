@@ -1,25 +1,30 @@
 /* Caza de Señales · estilos compartidos
-   Layout: menús en una consola oscura; el juego ocupa toda la pantalla con un cielo de día
-   (proyector: cielo completo con banda superior; celular: HUD arriba, cielo al centro, balas abajo). */
+   Layout: estilo póster de atardecer retro. Menús sobre un ciruela oscuro con un horizonte arriba;
+   el juego ocupa toda la pantalla con el cielo naranja (proyector: banda superior y panel lateral;
+   celular: HUD arriba, cielo o mapa al centro, controles abajo). */
 :root {
-  --ink: #0A1F2B;
-  --panel: #0F2F3E;
-  --panel-2: #154152;
-  --line: #245467;
-  --fg: #EAF3F2;
-  --muted: #93B4BC;
+  --ink: #1C0F16;
+  --panel: #2A1720;
+  --panel-2: #3B2029;
+  --line: #5C2F38;
+  --fg: #FBEFE3;
+  --muted: #CFA697;
   --signal: #FFB547;
-  --on-tile: #0A1F2B;
-  --a1: #FF7A5C;
+  --sunset: #E86A3E;
+  --on-tile: #1C0F16;
+  --a1: #FF5D8F;
   --a2: #2EBCAC;
   --a3: #F4CC4E;
   --a4: #8197FF;
   --ok: #5BDA9C;
   --bad: #FF6B7D;
-  --ok-fondo: #0F3B2E;
-  --bad-fondo: #3E1824;
-  --bonus-fondo: #2B1546;
-  --banda: rgba(10, 31, 43, .9);
+  --ok-fondo: #12382F;
+  --bad-fondo: #4A1726;
+  --bonus-fondo: #2E1638;
+  --banda: rgba(28, 15, 22, .92);
+  --omni: #2EBCAC;
+  --sector: #F4CC4E;
+  --para: #FF5D8F;
   --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
   --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -32,7 +37,7 @@ body {
   margin: 0;
   min-height: 100%;
   background-color: var(--ink);
-  background-image: radial-gradient(120% 55% at 50% -12%, var(--panel-2), var(--ink) 62%);
+  background-image: radial-gradient(120% 55% at 50% -12%, #4A2230, var(--ink) 62%);
   background-repeat: no-repeat;
   color: var(--fg);
   font-family: var(--body);
@@ -206,7 +211,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .vacio { color: var(--muted); padding: 16px; border: 1px dashed var(--line); border-radius: 12px; }
 
 /* juego a pantalla completa */
-.juego-host { position: fixed; inset: 0; overflow: hidden; background: #86CBF5; }
+.juego-host { position: fixed; inset: 0; overflow: hidden; background: #EE6B3F; }
 .juego-host canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .banda {
   position: absolute; left: 0; right: 0; top: 0; z-index: 5;
@@ -214,7 +219,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   padding-block: max(12px, env(safe-area-inset-top, 0px)) 12px;
   padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px));
   background: var(--banda);
-  box-shadow: 0 6px 0 rgba(10, 31, 43, .25);
+  box-shadow: 0 6px 0 rgba(28, 15, 22, .25);
 }
 .banda h2 { font-weight: 700; font-size: clamp(1.3rem, 2.6vw, 2.3rem); line-height: 1.15; text-wrap: balance; }
 .banda-info { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-family: var(--mono); color: var(--muted); font-size: clamp(.85rem, 1.2vw, 1.05rem); white-space: nowrap; }
@@ -238,7 +243,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 6px; text-align: center; pointer-events: none;
 }
-.cuenta > * { text-shadow: 0 3px 0 rgba(10, 31, 43, .35); }
+.cuenta > * { text-shadow: 0 3px 0 rgba(28, 15, 22, .35); }
 .cuenta .eyebrow { color: var(--ink); background: var(--signal); padding: 6px 14px; border-radius: 99px; text-shadow: none; font-size: clamp(.8rem, 1.4vw, 1.1rem); }
 .cuenta-num { margin-block: .12em; font-family: var(--display); font-weight: 900; font-size: clamp(7rem, 22vw, 16rem); line-height: .9; color: #FFFFFF; -webkit-text-stroke: 4px var(--ink); animation: latir 1s ease infinite; }
 .cuenta-ayuda { font-weight: 700; font-size: clamp(1.1rem, 2.4vw, 2rem); color: var(--ink); background: rgba(255, 255, 255, .85); padding: 6px 16px; border-radius: 12px; text-shadow: none; }
@@ -248,8 +253,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   position: absolute; z-index: 6; right: max(20px, env(safe-area-inset-right, 0px)); bottom: max(20px, env(safe-area-inset-bottom, 0px));
   width: min(470px, 38vw); max-height: calc(100% - var(--alto-banda, 120px) - 40px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 14px; padding: 20px;
-  background: rgba(10, 31, 43, .97); border: 1px solid var(--line); border-radius: 18px;
-  box-shadow: 0 16px 40px rgba(10, 31, 43, .35);
+  background: rgba(28, 15, 22, .96); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(28, 15, 22, .4);
   animation: deslizar .45s cubic-bezier(.2, .8, .2, 1);
 }
 @keyframes deslizar { from { opacity: 0; transform: translateX(40px); } }
@@ -286,7 +291,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .titulo-final { font-family: var(--display); font-weight: 900; font-size: clamp(3rem, 8vw, 6rem); line-height: .9; text-transform: uppercase; }
 .final-cabeza { display: flex; flex-direction: column; gap: 6px; }
 .resto { max-width: 900px; width: 100%; margin: 0 auto; }
-.premios { list-style: none; margin: 0 auto; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 900px; width: 100%; }
+.premios { list-style: none; margin: 0 auto; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; max-width: 900px; width: 100%; }
 .premios li { padding: 14px 16px; border-radius: 12px; background: var(--panel); border-top: 3px solid var(--c, var(--line)); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .premios .quien { font-weight: 700; font-size: 1.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .premios .valor { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1; color: var(--signal); }
@@ -364,7 +369,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .resultado-j .grande { font-family: var(--display); font-weight: 900; font-size: clamp(4rem, 22vw, 6.5rem); line-height: .9; font-variant-numeric: tabular-nums; color: var(--signal); }
 .resultado-j.mal .grande { color: var(--fg); }
 .resultado-j .detalle { font-family: var(--mono); color: var(--muted); }
-.resultado-j .era { background: rgba(10, 31, 43, .6); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.resultado-j .era { background: rgba(28, 15, 22, .6); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
 .resultado-j .puesto-j { font-weight: 700; font-size: 1.2rem; }
 
 .final-j .grande { font-family: var(--display); font-weight: 900; font-size: clamp(5rem, 30vw, 8rem); line-height: .85; color: var(--signal); }
@@ -376,3 +381,49 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 @media (prefers-reduced-motion: reduce) {
   .dron-logo, .mira, .cuenta-num, .puesto, .panel-res, .chips button { animation: none !important; }
 }
+
+/* =================== HORIZONTE (menús) =================== */
+.horizonte { display: block; width: 100%; height: clamp(72px, 9vw, 124px); }
+.horizonte svg { display: block; width: 100%; height: 100%; }
+.jugador .horizonte { height: 96px; }
+
+/* =================== BONUS: panel en vivo del proyector =================== */
+.panel-vivo { top: calc(var(--alto-banda, 120px) + 16px); bottom: auto; max-height: calc(100% - var(--alto-banda, 120px) - 90px); }
+.panel-vivo h3 { font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1; }
+.leyenda-bonus { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.leyenda-bonus li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 10px; align-items: start; }
+.leyenda-bonus li i { grid-row: span 2; margin-top: 3px; }
+.leyenda-bonus b { font-size: clamp(1rem, 1.3vw, 1.2rem); }
+.leyenda-bonus span { color: var(--muted); font-size: clamp(.9rem, 1.1vw, 1.05rem); line-height: 1.3; }
+.vivo-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vivo-lista li { display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) 3.4rem; align-items: center; gap: 10px; font-size: clamp(.95rem, 1.2vw, 1.15rem); }
+.vivo-lista .quien { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vivo-lista .barra { height: 14px; border-radius: 7px; background: var(--panel-2); overflow: hidden; }
+.vivo-lista .barra i { display: block; height: 100%; border-radius: 7px; transition: width .4s ease; }
+.vivo-lista .n { font-family: var(--mono); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.vivo-lista .vivo-vacio { display: block; color: var(--muted); }
+
+/* iconos de antena (leyenda y botones) */
+[class^="ico-"] { display: inline-block; flex: none; width: 22px; height: 22px; border-radius: 50%; position: relative; background: var(--ink); border: 2px solid currentColor; }
+.ico-omni { color: var(--omni); }
+.ico-sector { color: var(--sector); }
+.ico-para { color: var(--para); }
+.ico-am, .ico-fm, .ico-wifi { color: var(--sunset); }
+.ico-omni::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; border: 2px solid currentColor; }
+.ico-sector::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: translate(-50%, -70%);
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid currentColor; }
+.ico-para::after { content: ""; position: absolute; left: 3px; top: 4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; transform: rotate(-30deg); }
+.ico-am::after, .ico-fm::after, .ico-wifi::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: currentColor; }
+
+/* =================== BONUS: controles del celular =================== */
+.herramientas { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-width: 0; }
+.herramientas button {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  font-weight: 700; font-size: .78rem; cursor: pointer;
+}
+.herramientas button[aria-pressed="true"] { background: var(--fg); color: var(--on-tile); border-color: var(--fg); }
+.pie-ciudad { flex-wrap: wrap; }
+.pie-ciudad .texto { order: -1; flex-basis: 100%; text-align: center; font-family: var(--mono); color: var(--fg); }
+.dial-botones { display: flex; gap: 8px; }
+.dial-botones .btn-icono { width: 48px; height: 44px; font-size: 1.1rem; }

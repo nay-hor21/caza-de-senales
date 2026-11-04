@@ -46,7 +46,27 @@
     s.start(t);
   }
 
+  // Estática continua de radio: su volumen sigue a qué tan lejos está el dial.
+  var estaticaFuente = null, estaticaGanancia = null;
+  function estatica(nivel) {
+    var c = contexto();
+    if (!c) return;
+    if (!estaticaFuente) {
+      if (nivel <= 0) return;
+      var n = c.sampleRate * 2, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      estaticaFuente = c.createBufferSource(); estaticaFuente.buffer = buf; estaticaFuente.loop = true;
+      var f = c.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 900;
+      estaticaGanancia = c.createGain(); estaticaGanancia.gain.value = 0;
+      estaticaFuente.connect(f); f.connect(estaticaGanancia); estaticaGanancia.connect(maestro);
+      estaticaFuente.start();
+    }
+    var v = activo ? Math.max(0, Math.min(1, nivel)) * 0.22 : 0;
+    estaticaGanancia.gain.setTargetAtTime(v, c.currentTime, 0.05);
+  }
+
   window.Sonido = {
+    estatica: estatica,
     desbloquear: function () { contexto(); },
     activo: function (v) { if (typeof v === "boolean") activo = v; return activo; },
     disparo: function (suave) {

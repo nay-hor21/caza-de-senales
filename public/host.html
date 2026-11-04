@@ -10,6 +10,27 @@
 <link rel="stylesheet" href="/estilos.css">
 </head>
 <body class="host">
+<div class="horizonte" aria-hidden="true">
+  <svg viewBox="0 0 1200 170" preserveAspectRatio="xMidYMax slice">
+    <defs>
+      <linearGradient id="hz-cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C93A2B"/><stop offset=".55" stop-color="#EE6B3F"/><stop offset="1" stop-color="#F9C98A"/></linearGradient>
+      <linearGradient id="hz-fin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C0F16" stop-opacity="0"/><stop offset="1" stop-color="#1C0F16"/></linearGradient>
+    </defs>
+    <rect width="1200" height="170" fill="url(#hz-cielo)"/>
+    <circle cx="600" cy="150" r="118" fill="#FBE3AE"/>
+    <g fill="#EE6B3F" opacity=".4"><rect x="480" y="112" width="240" height="5"/><rect x="480" y="126" width="240" height="7"/><rect x="480" y="142" width="240" height="9"/></g>
+    <path d="M0 170 L0 120 L90 70 L170 112 L260 58 L350 118 L430 96 L520 140 L680 140 L760 92 L850 120 L940 60 L1030 108 L1110 74 L1200 112 L1200 170 Z" fill="#E27052"/>
+    <path d="M0 170 L0 140 L120 104 L220 138 L330 112 L440 150 L760 150 L870 116 L980 140 L1090 108 L1200 136 L1200 170 Z" fill="#C24A3B"/>
+    <g stroke="#3B1C28" stroke-width="4" fill="none" stroke-linecap="round">
+      <path d="M865 160 L895 52 L925 160 M876 120 L914 120 M884 90 L906 90 M876 120 L906 90 M914 120 L884 90 M895 52 L895 36"/>
+    </g>
+    <g fill="#2E1620">
+      <path d="M0 170 L20 110 L40 170 Z M30 170 L58 90 L86 170 Z M70 170 L96 118 L122 170 Z M1080 170 L1104 112 L1128 170 Z M1116 170 L1146 86 L1176 170 Z M1160 170 L1184 120 L1208 170 Z"/>
+      <path d="M180 170 L196 140 L212 170 Z M240 170 L254 146 L268 170 Z M960 170 L976 142 L992 170 Z M1010 170 L1024 148 L1038 170 Z"/>
+    </g>
+    <rect y="120" width="1200" height="50" fill="url(#hz-fin)"/>
+  </svg>
+</div>
 <main class="app" id="app">
 
   <p id="v-cargando" class="nota">Conectando…</p>
@@ -25,14 +46,14 @@
         </g>
         <ellipse class="helice" cx="22" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
         <ellipse class="helice" cx="118" cy="25" rx="20" ry="4" fill="#9FB8C2"/>
-        <rect x="38" y="32" width="64" height="40" rx="15" fill="#FFB547" stroke="#B9822A" stroke-width="3"/>
+        <rect x="38" y="32" width="64" height="40" rx="15" fill="#FFB547" stroke="#1C0F16" stroke-width="3"/>
         <circle cx="70" cy="52" r="13" fill="#FFFFFF"/>
-        <path d="M64 52 l4 4 l8 -9" stroke="#0A1F2B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M64 52 l4 4 l8 -9" stroke="#1C0F16" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="93" cy="12" r="4" fill="#FF3B4E"/>
       </svg>
       <p class="eyebrow">Proyector · Juego en vivo</p>
       <h1>Caza de <span>Señales</span></h1>
-      <p class="lead">Los drones vuelan con las respuestas colgadas. Cada compañero apunta desde su celular y tiene 3 balas para derribar el correcto. Entre preguntas hay rondas bonus para cazar interferencias.</p>
+      <p class="lead">Los drones vuelan con las respuestas colgadas. Cada compañero apunta desde su celular y tiene 3 balas para derribar el correcto. Cada 3 preguntas llega un bonus distinto: cazar interferencias, cubrir una ciudad con antenas o sintonizar emisoras.</p>
     </header>
 
     <form id="form-config" class="panel form">
@@ -57,7 +78,7 @@
     <ul class="reglas">
       <li><b>3 balas</b><span>por pregunta; el primer dron que tocas es tu respuesta</span></li>
       <li><b>1000</b><span>puntos máximo; más rápido, más puntos</span></li>
-      <li><b>+150</b><span>por cada interferencia dorada en el bonus</span></li>
+      <li><b>3 bonus</b><span>interferencias, cubrir la ciudad y sintonizar emisoras</span></li>
     </ul>
   </section>
 
@@ -128,12 +149,21 @@
       <ul class="votos" id="res-votos"></ul>
     </div>
     <div id="res-bonus">
-      <p class="eyebrow">Ronda bonus</p>
-      <p class="titulo-bonus">Mejores cazadores</p>
+      <p class="eyebrow" id="res-bonus-eyebrow">Ronda bonus</p>
+      <p class="titulo-bonus" id="res-bonus-titulo">Mejores cazadores</p>
+      <p class="res-exp" id="res-bonus-nota" hidden></p>
     </div>
     <h3 id="res-top-titulo">Top 5</h3>
     <ol class="lista-top" id="res-top"></ol>
     <button class="btn-principal" id="btn-siguiente" type="button">Siguiente ronda</button>
+  </aside>
+
+  <aside class="panel-res panel-vivo" id="panel-vivo" hidden>
+    <p class="eyebrow" id="vivo-eyebrow">Ronda bonus</p>
+    <h3 id="vivo-titulo">Dale señal a toda la ciudad</h3>
+    <ul class="leyenda-bonus" id="vivo-leyenda"></ul>
+    <p class="eyebrow" id="vivo-subtitulo">Cobertura en vivo</p>
+    <ol class="vivo-lista" id="vivo-lista"></ol>
   </aside>
 
   <div class="controles">
@@ -147,6 +177,8 @@
 <script src="/escena-datos.js"></script>
 <script src="/escena.js"></script>
 <script src="/sonido.js"></script>
+<script src="/ciudad.js"></script>
+<script src="/radio.js"></script>
 <script src="/host.js"></script>
 </body>
 </html>

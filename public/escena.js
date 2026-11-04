@@ -4,10 +4,10 @@
   "use strict";
 
   var D = window.EscenaDatos;
-  var COLORES = ["#FF7A5C", "#2EBCAC", "#F4CC4E", "#8197FF"];
-  var OSCUROS = ["#B9452D", "#1B7C71", "#B08A12", "#4D5FC2"];
+  var COLORES = ["#FF5D8F", "#2EBCAC", "#F4CC4E", "#8197FF"];
+  var OSCUROS = ["#A8264F", "#16645B", "#9A7408", "#3F4FB0"];
   var LETRAS = ["A", "B", "C", "D"];
-  var TINTA = "#0A1F2B";
+  var TINTA = "#1C0F16";
 
   function limitar(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function suave(u) { u = limitar(u, 0, 1); return u * u * (3 - 2 * u); }
@@ -60,6 +60,7 @@
     var reventadas = {};
     var revel = null;
     var mascotaMax = 0.88;
+    var capa = null;
     var cacheFrame = -1, cachePos = null;
     var nubes = [
       { x: 0.08, y: 0.1, s: 1.0, v: 0.006 },
@@ -88,38 +89,88 @@
       pintarFrente();
     }
 
+    function pinos(c, x0, x1, base, altoMin, altoMax, color, semilla) {
+      var r = D.azar(semilla);
+      c.fillStyle = color;
+      var x = x0;
+      while (x < x1) {
+        var alto = altoMin + r() * (altoMax - altoMin), ancho = alto * 0.36;
+        c.beginPath();
+        c.moveTo(x - ancho, base);
+        for (var k = 0; k < 4; k++) {
+          var y = base - alto * (k + 1) / 4.2, a = ancho * (1 - k / 4.6);
+          c.lineTo(x - a, y + alto * 0.08); c.lineTo(x - a * 0.45, y);
+        }
+        c.lineTo(x, base - alto);
+        for (var j = 3; j >= 0; j--) {
+          var y2 = base - alto * (j + 1) / 4.2, a2 = ancho * (1 - j / 4.6);
+          c.lineTo(x + a2 * 0.45, y2); c.lineTo(x + a2, y2 + alto * 0.08);
+        }
+        c.lineTo(x + ancho, base); c.closePath(); c.fill();
+        x += ancho * (0.9 + r() * 0.8);
+      }
+    }
+
     function pintarFondo() {
       fondo.width = canvas.width; fondo.height = canvas.height;
       var c = fondo.getContext("2d");
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       var suelo = pyF(SUELO);
-      var cielo = c.createLinearGradient(0, 0, 0, suelo);
-      cielo.addColorStop(0, "#3E9FE6");
-      cielo.addColorStop(0.65, "#86CBF5");
-      cielo.addColorStop(1, "#CDEBFB");
+      // cielo del atardecer
+      var cielo = c.createLinearGradient(0, arriba, 0, suelo);
+      cielo.addColorStop(0, "#C93A2B");
+      cielo.addColorStop(0.45, "#EE6B3F");
+      cielo.addColorStop(1, "#F9C98A");
       c.fillStyle = cielo;
       c.fillRect(0, 0, W, suelo + 2);
-      // sol
-      c.fillStyle = "rgba(255, 244, 200, .9)";
-      c.beginPath(); c.arc(W * 0.9, pyF(0.1), R * 0.9, 0, Math.PI * 2); c.fill();
-      // colinas lejanas
-      c.fillStyle = "#8FCDB0";
-      c.beginPath();
-      c.moveTo(0, suelo);
-      for (var x = 0; x <= W + 20; x += 20) c.lineTo(x, suelo - Hs * (0.05 + 0.03 * Math.sin(x / W * 7 + 1)));
-      c.lineTo(W, suelo); c.closePath(); c.fill();
-      // torres y parabólica a lo lejos
-      var lejos = "rgba(46, 104, 128, .55)";
-      torreReticulada(c, W * 0.1, suelo - Hs * 0.02, Hs * 0.36, Hs * 0.08, lejos, Math.max(1.5, R * 0.05));
-      torreReticulada(c, W * 0.83, suelo - Hs * 0.03, Hs * 0.27, Hs * 0.06, lejos, Math.max(1.5, R * 0.045));
-      c.fillStyle = lejos; c.strokeStyle = lejos; c.lineWidth = Math.max(2, R * 0.06);
-      var dx = W * 0.64, dy = suelo - Hs * 0.08, dr = Hs * 0.06;
-      c.beginPath(); c.moveTo(dx, suelo - Hs * 0.02); c.lineTo(dx, dy); c.stroke();
+      // sol enorme con anillos
+      var sx = W * 0.5, sy = pyF(SUELO - 0.08), sr = Math.min(W * 0.26, Hs * 0.36);
+      c.fillStyle = "rgba(252, 226, 170, .35)";
+      c.beginPath(); c.arc(sx, sy, sr * 1.18, 0, Math.PI * 2); c.fill();
+      c.fillStyle = "#FBE3AE";
+      c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2); c.fill();
+      // franjas del sol (estilo póster)
+      c.fillStyle = "rgba(238, 107, 63, .35)";
+      for (var b = 0; b < 4; b++) c.fillRect(sx - sr, sy + sr * (0.25 + b * 0.17), sr * 2, sr * (0.03 + b * 0.012));
+      // pájaros
+      c.strokeStyle = "rgba(59, 28, 40, .7)"; c.lineWidth = Math.max(1.5, R * 0.05); c.lineCap = "round";
+      [[0.18, 0.14], [0.22, 0.1], [0.74, 0.2], [0.79, 0.16], [0.62, 0.08]].forEach(function (p) {
+        var bx = px(p[0]), by = pyF(p[1]), bw = R * 0.22;
+        c.beginPath(); c.moveTo(bx - bw, by - bw * 0.4); c.quadraticCurveTo(bx - bw * 0.4, by - bw * 0.5, bx, by);
+        c.quadraticCurveTo(bx + bw * 0.4, by - bw * 0.5, bx + bw, by - bw * 0.4); c.stroke();
+      });
+      // montañas lejanas y cercanas
+      function cordillera(picos, color, base) {
+        c.fillStyle = color;
+        c.beginPath(); c.moveTo(0, base);
+        picos.forEach(function (p) { c.lineTo(px(p[0]), pyF(p[1])); });
+        c.lineTo(W, base); c.closePath(); c.fill();
+      }
+      cordillera([[-0.02, 0.62], [0.08, 0.44], [0.16, 0.56], [0.27, 0.4], [0.36, 0.58], [0.64, 0.6], [0.73, 0.42], [0.83, 0.55], [0.93, 0.38], [1.03, 0.6]], "#E27052", suelo);
+      cordillera([[-0.02, 0.72], [0.1, 0.55], [0.22, 0.7], [0.31, 0.6], [0.42, 0.74], [0.58, 0.74], [0.7, 0.58], [0.8, 0.7], [0.9, 0.56], [1.03, 0.72]], "#C24A3B", suelo);
+      c.strokeStyle = "rgba(255, 214, 180, .5)"; c.lineWidth = Math.max(1.5, R * 0.05);
+      [[0.27, 0.4], [0.73, 0.42], [0.93, 0.38], [0.08, 0.44]].forEach(function (p) {
+        c.beginPath();
+        c.moveTo(px(p[0]), pyF(p[1] + 0.01)); c.lineTo(px(p[0] + 0.025), pyF(p[1] + 0.07));
+        c.moveTo(px(p[0] - 0.012), pyF(p[1] + 0.04)); c.lineTo(px(p[0] + 0.008), pyF(p[1] + 0.1));
+        c.stroke();
+      });
+      // torres de telecomunicaciones a contraluz
+      var sombra = "#4A2230";
+      torreReticulada(c, W * 0.12, suelo + Hs * 0.01, Hs * 0.42, Hs * 0.09, sombra, Math.max(2, R * 0.06));
+      torreReticulada(c, W * 0.86, suelo + Hs * 0.01, Hs * 0.34, Hs * 0.07, sombra, Math.max(2, R * 0.055));
+      c.fillStyle = sombra; c.strokeStyle = sombra; c.lineWidth = Math.max(2, R * 0.07);
+      var dx = W * 0.66, dy = suelo - Hs * 0.07, dr = Hs * 0.055;
+      c.beginPath(); c.moveTo(dx, suelo); c.lineTo(dx, dy); c.stroke();
       c.beginPath(); c.ellipse(dx, dy - dr * 0.4, dr, dr * 0.55, -0.6, Math.PI * 0.05, Math.PI * 1.05); c.fill();
-      // pasto
-      var pasto = c.createLinearGradient(0, suelo, 0, H);
-      pasto.addColorStop(0, "#58B86D"); pasto.addColorStop(1, "#3E9A57");
-      c.fillStyle = pasto;
+      // bosque lejano y pinos altos en las orillas (quedan detrás de los drones)
+      pinos(c, -10, W + 10, suelo + Hs * 0.01, Hs * 0.05, Hs * 0.09, "#7A2E35", 3);
+      pinos(c, -20, W * 0.16, suelo + Hs * 0.05, Hs * 0.16, Hs * 0.28, "#3B1C28", 5);
+      pinos(c, W * 0.84, W + 20, suelo + Hs * 0.05, Hs * 0.16, Hs * 0.28, "#3B1C28", 9);
+      // suelo
+      var tierra = c.createLinearGradient(0, suelo, 0, H);
+      tierra.addColorStop(0, "#8E3B34"); tierra.addColorStop(1, "#4A1E28");
+      c.fillStyle = tierra;
       c.fillRect(0, suelo, W, H - suelo);
     }
 
@@ -127,44 +178,37 @@
       frente.width = canvas.width; frente.height = canvas.height;
       var c = frente.getContext("2d");
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var borde = pyF(SUELO) + Hs * 0.02;
-      var r = D.azar(7);
-      c.fillStyle = "#2F8A4B";
-      c.beginPath();
-      c.moveTo(0, H);
-      c.lineTo(0, borde);
-      var paso = Math.max(10, R * 0.32);
-      for (var x = 0; x <= W + paso; x += paso) {
-        var alto = Hs * (0.025 + r() * 0.035);
-        c.lineTo(x + paso * 0.5, borde - alto);
-        c.lineTo(x + paso, borde - Hs * 0.004);
-      }
-      c.lineTo(W, H); c.closePath(); c.fill();
-      c.fillStyle = "#24733D";
-      c.fillRect(0, borde + Hs * 0.03, W, H);
-      // arbustos
-      [0.05, 0.31, 0.58, 0.95].forEach(function (bx, i) {
-        var cx = W * bx, cy = borde + Hs * 0.01, rr = R * (0.9 + (i % 2) * 0.4);
-        c.fillStyle = "#2A7E44";
-        c.beginPath();
-        c.arc(cx - rr * 0.6, cy, rr * 0.7, 0, Math.PI * 2);
-        c.arc(cx, cy - rr * 0.35, rr * 0.85, 0, Math.PI * 2);
-        c.arc(cx + rr * 0.7, cy, rr * 0.65, 0, Math.PI * 2);
-        c.fill();
+      var borde = pyF(SUELO) + Hs * 0.03;
+      // franja de suelo cercano
+      c.fillStyle = "#3B1C28";
+      c.fillRect(0, borde, W, H - borde);
+      // bosque cercano: más alto en las orillas, como un marco
+      var r = D.azar(11);
+      pinos(c, -20, W + 20, borde + Hs * 0.03, Hs * 0.04, Hs * 0.08, "#2E1620", 13);
+      // árboles secos naranjas
+      c.strokeStyle = "#E86A3E"; c.lineCap = "round";
+      [0.06, 0.94].forEach(function (bx, n) {
+        var x = W * bx, base = H, alto = Math.min(Hs * (0.13 + n * 0.02), H - borde + Hs * 0.06);
+        c.lineWidth = Math.max(2, R * 0.08);
+        c.beginPath(); c.moveTo(x, base); c.lineTo(x, base - alto); c.stroke();
+        c.lineWidth = Math.max(1.5, R * 0.05);
+        for (var k = 1; k <= 3; k++) {
+          var y = base - alto * (0.3 + k * 0.18), l = alto * (0.22 - k * 0.04);
+          c.beginPath(); c.moveTo(x, y); c.lineTo(x - l * 0.8, y - l); c.moveTo(x, y + alto * 0.05); c.lineTo(x + l * 0.8, y - l * 0.9 + alto * 0.05); c.stroke();
+        }
       });
+      void r;
     }
 
     // ---------- piezas ----------
     function dibujarNubes(t) {
-      ctx.fillStyle = "rgba(255,255,255,.92)";
+      // nubes planas y alargadas, como en un póster
+      ctx.fillStyle = "rgba(255, 226, 190, .55)";
       nubes.forEach(function (n) {
         var x = ((n.x + t * n.v) % 1.3) - 0.15;
         var cx = px(x), cy = pyF(n.y), s = R * 1.3 * n.s;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, s * 1.5, s * 0.55, 0, 0, Math.PI * 2);
-        ctx.ellipse(cx - s * 0.6, cy - s * 0.25, s * 0.7, s * 0.55, 0, 0, Math.PI * 2);
-        ctx.ellipse(cx + s * 0.35, cy - s * 0.45, s * 0.8, s * 0.65, 0, 0, Math.PI * 2);
-        ctx.fill();
+        redondeado(ctx, cx - s * 1.8, cy - s * 0.14, s * 3.6, s * 0.28, s * 0.14); ctx.fill();
+        redondeado(ctx, cx - s * 1.0, cy - s * 0.42, s * 2.2, s * 0.22, s * 0.11); ctx.fill();
       });
     }
 
@@ -256,8 +300,8 @@
     }
 
     function dibujarInterferencia(x, y, r, b, t) {
-      var color = b.dorada ? "#FFC233" : "#B04BFF";
-      var borde = b.dorada ? "#B97E00" : "#6C1FB0";
+      var color = b.dorada ? "#FFC233" : "#3BB89B";
+      var borde = b.dorada ? "#B97E00" : "#1E5E50";
       var puntas = 12;
       ctx.save();
       ctx.translate(x, y);
@@ -546,6 +590,11 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.drawImage(frente, 0, 0);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (capa) {
+          ctx.save();
+          capa(ctx, { W: W, H: H, arriba: arriba, Hs: Hs, t: ahora, tRonda: t, R: R });
+          ctx.restore();
+        }
         if (mascota && mascota.sube >= 1) {
           var texto = mascota.modo === "atrapo"
             ? "¡Lo atrapé! Era la " + LETRAS[revel.correcta]
@@ -568,7 +617,15 @@
       margenSuperior: function (px2) { if (px2 !== arriba) { arriba = px2; medir(); } },
       limiteMascota: function (x) { mascotaMax = x; },
       medir: medir,
-      vacio: function () { estado = { modo: "vacio" }; revel = null; derribados = {}; reventadas = {}; },
+      vacio: function () { estado = { modo: "vacio" }; revel = null; derribados = {}; reventadas = {}; capa = null; },
+      // Ronda sin drones (ciudad o radio): la escena dibuja el fondo y llama a la capa.
+      libre: function (d) {
+        estado = { modo: "libre", clave: d.clave };
+        fijarInicio(d.transcurridoMs);
+        revel = null; derribados = {}; reventadas = {};
+        capa = d.capa || null;
+      },
+      capa: function (fn) { capa = fn; },
       pregunta: function (d) {
         estado = { modo: "pregunta", clave: d.clave, drones: D.drones(d.seed, d.nivel), ops: d.ops };
         fijarInicio(d.transcurridoMs);
@@ -580,7 +637,7 @@
         revel = null; reventadas = {};
       },
       sincronizar: function (transcurridoMs) {
-        if (estado.modo !== "pregunta" && estado.modo !== "bonus") return;
+        if (estado.modo !== "pregunta" && estado.modo !== "bonus" && estado.modo !== "libre") return;
         var actual = performance.now() - estado.inicioLocal;
         if (Math.abs(actual - transcurridoMs) > 450) fijarInicio(transcurridoMs);
       },
@@ -635,7 +692,7 @@
       ocultarDron: function (i) { derribados[i] = { t: -100, x: 0, y: 2, dir: 1, polvo: true }; },
       reventar: function (id, x, y, dorada) {
         reventadas[id] = true;
-        if (x !== undefined) pixeles(px(x), py(y), dorada ? "#FFC233" : "#B04BFF");
+        if (x !== undefined) pixeles(px(x), py(y), dorada ? "#FFC233" : "#3BB89B");
       },
       ocultarInterferencia: function (id) { reventadas[id] = true; },
       marcarDisparo: function (x, y, color, etiqueta) { marcas.push({ x: x, y: y, color: color, etiqueta: etiqueta, t: seg() }); },

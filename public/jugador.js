@@ -16,6 +16,44 @@
   var balas = 3, disparo = null, ultimoTiro = 0;
   var cazadas = 0, puntosBonus = 0;
   var bloqueo = null;
+  var modoBonus = null;
+  var ultimoEnvio = 0;
+
+  var ciudad = Ciudad.control({
+    cambio: function (st) {
+      $("pie-texto").textContent = "Cobertura " + st.res.pct + " % · antenas " + st.antenas.length + "/" + EscenaDatos.CIUDAD.MAX_ANTENAS;
+      $("h-puntos").textContent = st.res.pct + " %";
+      var ahora = performance.now();
+      if (st.arrastre && ahora - ultimoEnvio > 350) { ultimoEnvio = ahora; enviarCiudad(st); }
+    },
+    enviar: function (st) { ultimoEnvio = performance.now(); enviarCiudad(st); },
+    aviso: function (t) { avisarBreve(t); },
+    sonido: function (tipo) { if (tipo === "poner") Sonido.pop(false); else Sonido.sinBalas(); vibrar(15); }
+  });
+  window.__ciudad = ciudad; // para pruebas automáticas
+  function enviarCiudad(st) {
+    socket.emit("jugador:ciudad", { antenas: st.antenas.map(function (a) { return { t: a.t, x: a.x, y: a.y, a: a.a }; }) });
+  }
+
+  var radio = Radio.control({
+    cambio: function (st) {
+      $("pie-texto").textContent = st.idx === 1 ? "1 emisora sintonizada" : st.idx + " emisoras sintonizadas";
+      $("h-puntos").textContent = "+" + fmt(st.idx * 100);
+      var e = st.lista[st.idx];
+      if (e) $("h-pregunta").textContent = "Busca " + EscenaDatos.BANDAS[e.banda].nombre + " · " + e.etiqueta;
+    },
+    sintonizada: function (idx, pos) {
+      Sonido.atrapado(); vibrar(40);
+      socket.emit("jugador:sintonia", { idx: idx, pos: pos }, function (res) {
+        // Si el servidor no la contó, el dial vuelve a la emisora que corresponde.
+        if (res && !res.ok && typeof res.emisoras === "number" && res.emisoras !== radio.estado.idx) {
+          radio.iniciar(estado.ronda.seed, res.emisoras);
+        }
+      });
+    },
+    estatica: function (nivel) { Sonido.estatica(nivel); }
+  });
+  window.__radio = radio; // para pruebas automáticas
 
   // PIN desde el código QR
   var pinEnlace = (new URLSearchParams(location.search).get("pin") || "").replace(/\D/g, "").slice(0, 6);
@@ -167,11 +205,26 @@
     }
   }
 
-  function etiquetaRonda(r) { return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : "Ronda bonus"; }
+  var NOMBRE_BONUS = { interferencias: "Bonus · Interferencias", ciudad: "Bonus · Cubre la ciudad", radio: "Bonus · Sintoniza la emisora" };
+  var AYUDA_BONUS = {
+    interferencias: "Toca todas las interferencias que puedas",
+    ciudad: "Pon 4 antenas y dale señal a toda la ciudad",
+    radio: "Gira el dial hasta que se limpie la señal"
+  };
+  function etiquetaRonda(r) { return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : NOMBRE_BONUS[r.modo]; }
+
+  function mostrarControles(modo) {
+    modoBonus = modo;
+    $("balas").hidden = modo === "ciudad" || modo === "radio";
+    $("herramientas").hidden = modo !== "ciudad";
+    $("dial-botones").hidden = modo !== "radio";
+    $("pie-j").classList.toggle("pie-ciudad", modo === "ciudad");
+  }
 
   function pintarJuego() {
     var r = estado.ronda;
     $("h-ronda").textContent = r.tipo === "pregunta" ? r.numero + " / " + estado.totalPreguntas : "Bonus";
+    var modo = r.tipo === "pregunta" ? null : r.modo;
     $("h-puntos").textContent = fmt(estado.puntos) + " pts";
 
     if (estado.fase === "preparar") {
@@ -179,14 +232,14 @@
         claveEscena = r.clave; faseEscena = "preparar";
         cancelAnimationFrame(rafReloj);
         escena.vacio();
+        radio.detener();
+        mostrarControles(modo);
         balas = 3; disparo = null; cazadas = 0; puntosBonus = 0;
         $("aviso").hidden = true;
         $("h-leyenda").hidden = true;
-        $("h-pregunta").textContent = r.tipo === "pregunta" ? "Prepárate…" : "¡Ronda bonus!";
+        $("h-pregunta").textContent = r.tipo === "pregunta" ? "Prepárate…" : "¡" + NOMBRE_BONUS[modo].replace("Bonus · ", "") + "!";
         $("cuenta-tipo").textContent = etiquetaRonda(r);
-        $("cuenta-ayuda").textContent = r.tipo === "pregunta"
-          ? "Toca el dron con la respuesta correcta"
-          : "Toca todas las interferencias que puedas";
+        $("cuenta-ayuda").textContent = r.tipo === "pregunta" ? "Toca el dron con la respuesta correcta" : AYUDA_BONUS[modo];
         $("cuenta").hidden = false;
         $("h-tiempo").textContent = Math.round(r.duracionMs / 1000);
         $("h-tiempo").classList.remove("urgente");
@@ -205,12 +258,23 @@
       $("aviso").hidden = true;
       balas = estado.balas;
       disparo = estado.respuesta;
+      mostrarControles(modo);
       if (r.tipo === "pregunta") {
         escena.pregunta({ clave: r.clave, seed: r.seed, nivel: r.nivel, ops: estado.pregunta.ops, transcurridoMs: transcurrido });
         $("h-pregunta").textContent = estado.pregunta.q;
         pintarLeyenda(estado.pregunta.ops);
         if (disparo !== null) { escena.ocultarDron(disparo); avisar("Le diste a la " + LETRAS[disparo] + ". Espera el resultado"); }
         else if (balas <= 0) avisar("Sin balas. Espera el resultado");
+      } else if (modo === "ciudad") {
+        $("h-leyenda").hidden = true;
+        $("h-pregunta").textContent = "Toca para poner una antena, arrastra para apuntarla y toca una antena para quitarla";
+        escena.libre({ clave: r.clave, transcurridoMs: transcurrido, capa: function (ctx, info) { ciudad.dibujar(ctx, info); } });
+        ciudad.iniciar(r.seed, estado.bonus ? estado.bonus.antenas : []);
+        elegirHerramienta(ciudad.estado.herramienta);
+      } else if (modo === "radio") {
+        $("h-leyenda").hidden = true;
+        escena.libre({ clave: r.clave, transcurridoMs: transcurrido, capa: function (ctx, info) { radio.dibujar(ctx, info); } });
+        radio.iniciar(r.seed, estado.bonus ? estado.bonus.emisoras : 0);
       } else {
         escena.bonus({ clave: r.clave, seed: r.seed, duracion: r.duracionMs / 1000, transcurridoMs: transcurrido });
         $("h-pregunta").textContent = "¡Caza interferencias! Las doradas valen 150";
@@ -219,7 +283,7 @@
         puntosBonus = estado.bonus ? estado.bonus.puntos : 0;
         if (estado.bonus) estado.bonus.hits.forEach(function (id) { escena.ocultarInterferencia(id); });
       }
-      pintarPie();
+      if (!modo || modo === "interferencias") pintarPie();
       iniciarReloj(estado.restanteMs);
     } else {
       escena.sincronizar(transcurrido);
@@ -246,6 +310,7 @@
 
   function pintarPie() {
     var r = estado && estado.ronda;
+    if (r && r.tipo === "bonus" && r.modo !== "interferencias") return;
     var cont = $("balas");
     if (r && r.tipo === "bonus") {
       cont.innerHTML = "";
@@ -269,6 +334,23 @@
     a.textContent = texto;
     a.hidden = false;
   }
+  var avisoTimer = 0;
+  function avisarBreve(texto) {
+    avisar(texto);
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(function () { $("aviso").hidden = true; }, 2200);
+  }
+
+  function elegirHerramienta(t) {
+    ciudad.herramienta(t);
+    var botones = document.querySelectorAll("#herramientas button");
+    for (var k = 0; k < botones.length; k++) botones[k].setAttribute("aria-pressed", botones[k].dataset.t === t ? "true" : "false");
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#herramientas button"), function (b) {
+    b.addEventListener("click", function () { elegirHerramienta(b.dataset.t); Sonido.desbloquear(); });
+  });
+  $("dial-menos").addEventListener("click", function () { radio.paso(-1); });
+  $("dial-mas").addEventListener("click", function () { radio.paso(1); });
 
   // ---------- disparar ----------
   $("zona").addEventListener("pointerdown", function (e) {
@@ -276,6 +358,9 @@
     e.preventDefault();
     Sonido.desbloquear();
     var r = estado.ronda;
+    var rect = $("cielo").getBoundingClientRect();
+    if (modoBonus === "ciudad") { $("cielo").setPointerCapture(e.pointerId); ciudad.abajo(e.clientX - rect.left, e.clientY - rect.top); return; }
+    if (modoBonus === "radio") { $("cielo").setPointerCapture(e.pointerId); radio.abajo(e.clientX - rect.left); return; }
     var p = escena.normalizar(e.clientX, e.clientY);
     var ahora = performance.now();
 
@@ -325,6 +410,19 @@
     }
   });
 
+  $("zona").addEventListener("pointermove", function (e) {
+    if (!estado || estado.fase !== "jugar") return;
+    var rect = $("cielo").getBoundingClientRect();
+    if (modoBonus === "ciudad") ciudad.mover(e.clientX - rect.left, e.clientY - rect.top);
+    else if (modoBonus === "radio") radio.mover(e.clientX - rect.left, rect.width);
+  });
+  ["pointerup", "pointercancel"].forEach(function (tipo) {
+    $("zona").addEventListener(tipo, function () {
+      if (modoBonus === "ciudad") ciudad.arriba();
+      else if (modoBonus === "radio") radio.arriba();
+    });
+  });
+
   // ---------- resultado ----------
   function pintarResultado() {
     var r = estado.resultado;
@@ -332,11 +430,22 @@
     var sec = $("v-resultado");
     var era = $("r-era");
     era.hidden = true;
+    radio.detener();
     if (r.tipo === "bonus") {
       sec.className = "resultado-j bonus";
-      $("r-titulo").textContent = r.hits === 1 ? "Interferencia cazada" : "Interferencias cazadas";
-      $("r-puntos").textContent = r.hits;
-      $("r-detalle").textContent = "+" + fmt(r.ganados) + " pts";
+      if (r.modo === "ciudad") {
+        $("r-titulo").textContent = r.valor >= 95 ? "¡Ciudad protegida!" : "Cobertura de tu ciudad";
+        $("r-puntos").textContent = r.valor + " %";
+        $("r-detalle").textContent = "+" + fmt(r.ganados) + " pts";
+      } else if (r.modo === "radio") {
+        $("r-titulo").textContent = r.valor === 1 ? "Emisora sintonizada" : "Emisoras sintonizadas";
+        $("r-puntos").textContent = r.valor;
+        $("r-detalle").textContent = "+" + fmt(r.ganados) + " pts";
+      } else {
+        $("r-titulo").textContent = r.valor === 1 ? "Interferencia cazada" : "Interferencias cazadas";
+        $("r-puntos").textContent = r.valor;
+        $("r-detalle").textContent = "+" + fmt(r.ganados) + " pts";
+      }
     } else if (r.acierto) {
       sec.className = "resultado-j ok";
       $("r-titulo").textContent = "¡Le diste!";

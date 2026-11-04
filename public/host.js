@@ -177,13 +177,130 @@
     $("btn-empezar").disabled = n === 0;
   }
 
+  var INFO_BONUS = {
+    interferencias: {
+      nombre: "Ronda bonus · Interferencias",
+      ayuda: "Toca todas las interferencias que puedas: 50 pts, doradas 150",
+      banda: "¡Derriba todas las interferencias que puedas!",
+      fin: "¡Se acabaron las interferencias!",
+      titulo: "Mejores cazadores",
+      vacio: "Nadie cazó interferencias esta vez.",
+      valor: function (j) { return j.valor + (j.valor === 1 ? " cazada" : " cazadas") + " · +" + fmt(j.ganados); }
+    },
+    ciudad: {
+      nombre: "Ronda bonus · Cubre la ciudad",
+      ayuda: "Coloca 4 antenas en tu celular para dar señal a toda la ciudad",
+      banda: "Cubre la ciudad: coloca tus antenas desde el celular",
+      fin: "¡Llegan las interferencias a las zonas sin señal!",
+      titulo: "Mejor cobertura",
+      vacio: "Nadie colocó antenas esta vez.",
+      valor: function (j) { return j.valor + " % · +" + fmt(j.ganados); },
+      vivo: "Cobertura en vivo",
+      vivoValor: function (v) { return v + " %"; },
+      leyenda: [
+        ["omni", "Omnidireccional", "360°, alcance corto. Ideal para un barrio."],
+        ["sector", "Sectorial", "120°, alcance medio. Apúntala a lo largo de la avenida."],
+        ["para", "Parabólica", "Enlace punto a punto. Es la única que llega al pueblo tras la montaña."]
+      ]
+    },
+    radio: {
+      nombre: "Ronda bonus · Sintoniza la emisora",
+      ayuda: "Gira el dial en tu celular hasta que se limpie la estática",
+      banda: "Sintoniza la emisora: gira el dial en tu celular",
+      fin: "¡Se acabó la transmisión!",
+      titulo: "Mejores sintonizadores",
+      vacio: "Nadie sintonizó emisoras esta vez.",
+      valor: function (j) { return j.valor + (j.valor === 1 ? " emisora" : " emisoras") + " · +" + fmt(j.ganados); },
+      vivo: "Emisoras sintonizadas",
+      vivoValor: function (v) { return String(v); },
+      leyenda: [
+        ["am", "Radio AM", "530 a 1700 kHz (kilohercios)"],
+        ["fm", "Radio FM", "88 a 108 MHz (megahercios)"],
+        ["wifi", "Wi-Fi", "2,4 GHz, canales 1 al 11"]
+      ]
+    }
+  };
+
   function etiquetaRonda(r) {
-    return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : "Ronda bonus";
+    return r.tipo === "pregunta" ? "Pregunta " + r.numero + " de " + estado.totalPreguntas : INFO_BONUS[r.modo].nombre;
+  }
+
+  // Área del cielo que queda libre a la izquierda del panel lateral.
+  function areaIzquierda(info) {
+    var panel = Math.min(470, info.W * 0.38) + 40;
+    return { x: 24, y: info.arriba + 14, w: Math.max(200, info.W - panel - 36), h: info.Hs - 84 };
+  }
+
+  var ciudadHost = null;
+  function capaCiudad(info) {
+    if (!ciudadHost) return;
+    var R = Ciudad.ajustar(areaIzquierda(info), 0);
+    var ataque = null;
+    if (ciudadHost.ataque) ataque = { objetivos: ciudadHost.ataque, t: (performance.now() - ciudadHost.inicioAtaque) / 1000 };
+    Ciudad.dibujar(info.ctx, R, ciudadHost.mapa, ciudadHost.antenas, ciudadHost.res, { t: info.t, etiquetas: true, ataque: ataque });
+    if (ciudadHost.mejor) {
+      var texto = ciudadHost.mejor.nombre + " · " + ciudadHost.mejor.pct + " % de cobertura";
+      var c = info.ctx, fs = Math.max(14, Math.min(22, R.w * 0.04));
+      c.font = "700 " + fs + "px 'Atkinson Hyperlegible', sans-serif";
+      var w = c.measureText(texto).width + fs * 1.4;
+      c.fillStyle = "rgba(28, 15, 22, .92)";
+      c.fillRect(R.x + (R.w - w) / 2, R.y + R.h - fs * 2.4, w, fs * 1.8);
+      c.fillStyle = ciudadHost.mejor.color;
+      c.fillRect(R.x + (R.w - w) / 2, R.y + R.h - fs * 2.4, 6, fs * 1.8);
+      c.fillStyle = "#FBEFE3"; c.textAlign = "center"; c.textBaseline = "middle";
+      c.fillText(texto, R.x + R.w / 2, R.y + R.h - fs * 1.5);
+    }
+  }
+  function capaRadio(info) {
+    Radio.decorativa(info.ctx, areaIzquierda(info), info.t);
+  }
+  function conCtx(fn) { return function (ctx, info) { info.ctx = ctx; fn(info); }; }
+
+  function pintarVivo(r) {
+    var datos = INFO_BONUS[r.modo];
+    var leyenda = $("vivo-leyenda");
+    if (leyenda.dataset.modo !== r.modo) {
+      leyenda.dataset.modo = r.modo;
+      $("vivo-eyebrow").textContent = datos.nombre;
+      $("vivo-titulo").textContent = r.modo === "ciudad" ? "Dale señal a toda la ciudad" : "Encuentra la emisora";
+      $("vivo-subtitulo").textContent = datos.vivo;
+      leyenda.textContent = "";
+      datos.leyenda.forEach(function (l) {
+        var li = document.createElement("li");
+        var i = document.createElement("i"); i.className = "ico-" + l[0];
+        var b = document.createElement("b"); b.textContent = l[1];
+        var span = document.createElement("span"); span.textContent = l[2];
+        li.appendChild(i); li.appendChild(b); li.appendChild(span);
+        leyenda.appendChild(li);
+      });
+    }
+    var lista = estado.vivo || [];
+    var ol = $("vivo-lista");
+    ol.textContent = "";
+    var max = r.modo === "ciudad" ? 100 : Math.max(1, lista.reduce(function (m, j) { return Math.max(m, j.valor); }, 0));
+    if (!lista.length) {
+      var vacio = document.createElement("li");
+      vacio.className = "vivo-vacio";
+      vacio.textContent = "Esperando a los jugadores…";
+      ol.appendChild(vacio);
+    }
+    lista.forEach(function (j) {
+      var li = document.createElement("li");
+      var quien = document.createElement("span"); quien.className = "quien"; quien.textContent = j.nombre;
+      var barra = document.createElement("span"); barra.className = "barra";
+      var relleno = document.createElement("i"); relleno.style.width = Math.max(2, (j.valor / max) * 100) + "%"; relleno.style.background = j.color;
+      barra.appendChild(relleno);
+      var v = document.createElement("span"); v.className = "n"; v.textContent = datos.vivoValor(j.valor);
+      li.appendChild(quien); li.appendChild(barra); li.appendChild(v);
+      ol.appendChild(li);
+    });
   }
 
   function pintarJuego() {
     var r = estado.ronda;
     if (!r) return;
+    var esPregunta = r.tipo === "pregunta";
+    var libre = !esPregunta && r.modo !== "interferencias";
     $("j-pin").textContent = pinBonito(estado.pin);
     $("j-etiqueta").textContent = etiquetaRonda(r);
 
@@ -192,13 +309,13 @@
         detenerTodo();
         claveEscena = r.clave; faseEscena = "preparar";
         escena.vacio();
+        ciudadHost = null;
         $("panel-res").hidden = true;
+        $("panel-vivo").hidden = true;
         $("btn-saltar").hidden = true;
-        $("j-pregunta").textContent = r.tipo === "pregunta" ? "Prepárate…" : "¡Llegan las interferencias!";
+        $("j-pregunta").textContent = esPregunta ? "Prepárate…" : INFO_BONUS[r.modo].banda;
         $("cuenta-tipo").textContent = etiquetaRonda(r);
-        $("cuenta-ayuda").textContent = r.tipo === "pregunta"
-          ? "Derriba el dron que lleva la respuesta correcta"
-          : "Toca todas las interferencias que puedas: 50 pts, doradas 150";
+        $("cuenta-ayuda").textContent = esPregunta ? "Derriba el dron que lleva la respuesta correcta" : INFO_BONUS[r.modo].ayuda;
         $("cuenta").hidden = false;
         pintarReloj(r.duracionMs, r.duracionMs);
         iniciarCuenta(estado.restanteMs);
@@ -216,13 +333,24 @@
         $("cuenta").hidden = true;
         $("panel-res").hidden = true;
         $("btn-saltar").hidden = false;
-        if (r.tipo === "pregunta") {
+        $("panel-vivo").hidden = !libre;
+        if (esPregunta) {
           escena.pregunta({ clave: r.clave, seed: r.seed, nivel: r.nivel, ops: estado.pregunta.ops, transcurridoMs: transcurrido });
           $("j-pregunta").textContent = estado.pregunta.q;
           Sonido.inicio();
-        } else {
+        } else if (r.modo === "interferencias") {
           escena.bonus({ clave: r.clave, seed: r.seed, duracion: r.duracionMs / 1000, transcurridoMs: transcurrido });
-          $("j-pregunta").textContent = "¡Derriba todas las interferencias que puedas!";
+          $("j-pregunta").textContent = INFO_BONUS.interferencias.banda;
+          Sonido.bonus();
+        } else if (r.modo === "ciudad") {
+          var mapa = EscenaDatos.ciudadMapa(r.seed);
+          ciudadHost = { mapa: mapa, antenas: [], res: EscenaDatos.cobertura(mapa, []) };
+          escena.libre({ clave: r.clave, transcurridoMs: transcurrido, capa: conCtx(capaCiudad) });
+          $("j-pregunta").textContent = INFO_BONUS.ciudad.banda;
+          Sonido.bonus();
+        } else {
+          escena.libre({ clave: r.clave, transcurridoMs: transcurrido, capa: conCtx(capaRadio) });
+          $("j-pregunta").textContent = INFO_BONUS.radio.banda;
           Sonido.bonus();
         }
         iniciarReloj(estado.restanteMs, r.duracionMs);
@@ -230,7 +358,8 @@
       } else {
         escena.sincronizar(transcurrido);
       }
-      $("j-listos").textContent = r.tipo === "pregunta"
+      if (libre) pintarVivo(r);
+      $("j-listos").textContent = esPregunta
         ? estado.respondieron + " de " + estado.conectados + " dispararon"
         : estado.conectados + " cazadores";
       return;
@@ -243,9 +372,10 @@
         claveEscena = r.clave; faseEscena = "resultado";
         $("cuenta").hidden = true;
         $("btn-saltar").hidden = true;
+        $("panel-vivo").hidden = true;
         pintarReloj(0, r.duracionMs);
         var espera = 600;
-        if (r.tipo === "pregunta") {
+        if (esPregunta) {
           if (!vieneDeJuego || escena.modo() !== "pregunta") {
             escena.pregunta({ clave: r.clave, seed: r.seed, nivel: r.nivel, ops: estado.pregunta.ops, transcurridoMs: r.duracionMs });
           }
@@ -261,9 +391,23 @@
             sonidosTimer.push(setTimeout(Sonido.risa, 1300));
           }
           espera = 2800;
+        } else if (r.modo === "ciudad") {
+          var m2 = EscenaDatos.ciudadMapa(r.seed);
+          var mejor = estado.bonus && estado.bonus.mejor;
+          var antenas = mejor ? mejor.antenas : [];
+          var res2 = EscenaDatos.cobertura(m2, antenas);
+          ciudadHost = { mapa: m2, antenas: antenas, res: res2, mejor: mejor, ataque: Ciudad.prepararAtaque(m2, res2), inicioAtaque: performance.now() };
+          escena.libre({ clave: r.clave, transcurridoMs: r.duracionMs, capa: conCtx(capaCiudad) });
+          $("j-pregunta").textContent = INFO_BONUS.ciudad.fin;
+          if (res2.pct >= 95) Sonido.atrapado(); else sonidosTimer.push(setTimeout(Sonido.risa, 900));
+          espera = 2600;
+        } else if (r.modo === "radio") {
+          escena.libre({ clave: r.clave, transcurridoMs: r.duracionMs, capa: conCtx(capaRadio) });
+          $("j-pregunta").textContent = INFO_BONUS.radio.fin;
+          Sonido.final();
         } else {
           escena.vacio();
-          $("j-pregunta").textContent = "¡Se acabaron las interferencias!";
+          $("j-pregunta").textContent = INFO_BONUS.interferencias.fin;
           Sonido.final();
         }
         ajustarBanda();
@@ -273,7 +417,7 @@
         }, espera);
       }
       pintarPanel();
-      $("j-listos").textContent = r.tipo === "pregunta" ? estado.resultado.acertaron + " de " + estado.jugadores.length + " acertaron" : "";
+      $("j-listos").textContent = esPregunta ? estado.resultado.acertaron + " de " + estado.jugadores.length + " acertaron" : "";
     }
   }
 
@@ -311,15 +455,26 @@
       }
       pintarTop($("res-top"), estado.jugadores.slice(0, 5), function (j) { return fmt(j.puntos); });
     } else {
+      var datos = INFO_BONUS[r.modo];
+      $("res-bonus-eyebrow").textContent = datos.nombre;
+      $("res-bonus-titulo").textContent = datos.titulo;
+      var nota = $("res-bonus-nota");
+      nota.hidden = r.modo !== "ciudad";
+      if (r.modo === "ciudad") {
+        var mejor = estado.bonus && estado.bonus.mejor;
+        nota.textContent = mejor && mejor.pct >= 95
+          ? "¡Ciudad protegida! La combinación correcta: omni para el barrio, sectorial para la avenida y parabólica para el pueblo."
+          : "Las interferencias entran por las zonas sin señal. Omni para el barrio, sectorial para la avenida y parabólica para el pueblo.";
+      }
       var top = (estado.bonus && estado.bonus.top) || [];
       if (!top.length) {
         var ol = $("res-top");
         ol.textContent = "";
         var li = document.createElement("li");
-        li.textContent = "Nadie cazó interferencias esta vez.";
+        li.textContent = datos.vacio;
         ol.appendChild(li);
       } else {
-        pintarTop($("res-top"), top, function (j) { return j.hits + (j.hits === 1 ? " cazada" : " cazadas") + " · +" + fmt(j.ganados); });
+        pintarTop($("res-top"), top, datos.valor);
       }
     }
   }
@@ -411,6 +566,7 @@
     [
       ["punteria", "Mejor puntería", function (v) { return v + " %"; }],
       ["cazador", "Cazador de interferencias", function (v) { return v + (v === 1 ? " cazada" : " cazadas"); }],
+      ["cobertura", "Mejor cobertura", function (v) { return v + " %"; }],
       ["racha", "Mejor racha", function (v) { return v + " seguidas"; }]
     ].forEach(function (def) {
       var dato = p[def[0]];

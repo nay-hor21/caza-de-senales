@@ -1,11 +1,14 @@
 # Caza de Señales · juego multijugador sobre antenas
 
-Un juego de cacería en vivo. En el proyector y en cada celular vuelan cuatro drones, y cada uno lleva colgada una respuesta. Los jugadores tocan la pantalla para disparar y tienen **3 balas** por pregunta. El primer dron que derriban es su respuesta.
+Un juego de cacería en vivo con estilo de atardecer retro. En el proyector y en cada celular vuelan cuatro drones, y cada uno lleva colgada una respuesta. Los jugadores tocan la pantalla para disparar y tienen **3 balas** por pregunta. El primer dron que derriban es su respuesta.
 
 - Quien acierta gana de 500 a 1000 puntos, según qué tan rápido dispare. Cada acierto seguido suma 100 puntos extra, hasta +500.
 - Al revelar la respuesta, los drones equivocados se escapan y el correcto cae. Torri, la torrecita mascota, sale del pasto con el dron en la mano. Si nadie le atinó, se ríe.
-- Cada 3 preguntas hay una **ronda bonus**: durante 15 segundos cruzan el cielo interferencias que hay que derribar. Cada una vale 50 puntos, y las doradas, 150.
-- Al final aparece un podio con tres premios: mejor puntería, cazador de interferencias y mejor racha.
+- Cada 3 preguntas hay una **ronda bonus**, y se van turnando tres tipos:
+  - **Interferencias** (15 s): cruzan el cielo monstruos de interferencia que hay que derribar. Cada uno vale 50 puntos, y los dorados, 150.
+  - **Cubre la ciudad** (35 s): cada jugador coloca 4 antenas en un mapa. La omnidireccional cubre 360° de cerca, la sectorial cubre 120° y se apunta, y la parabólica hace un enlace punto a punto, la única forma de llegar al pueblo tras la montaña. Gana más quien cubra más población: 8 puntos por cada 1 %. Al final, las interferencias entran por las zonas sin señal.
+  - **Sintoniza la emisora** (25 s): hay que girar el dial de una radio hasta encontrar emisoras de AM, FM y Wi-Fi. La estática baja a medida que te acercas. Cada emisora vale 100 puntos.
+- Al final aparece un podio con premios a la mejor puntería, al cazador de interferencias, a la mejor cobertura y a la mejor racha.
 
 Incluye 26 preguntas, repartidas entre los tres temas de la exposición: fundamentos, tipos de antenas, y potencia, conectores y aplicaciones.
 
