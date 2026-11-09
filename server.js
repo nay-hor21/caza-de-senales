@@ -16,7 +16,7 @@ const MAX_JUGADORES = 60;
 const BALAS = 3;
 const SEG_PREPARAR = 3;
 const SEG_PREPARAR_BONUS = 6;   // un poco más, para leer las instrucciones
-const TOTAL_RONDAS = 20;        // preguntas + bonus
+const TOTAL_RONDAS = 13;        // preguntas + bonus
 const SEG_BONUS = { interferencias: ED.DURACION_BONUS, ciudad: ED.CIUDAD.DURACION, radio: ED.RADIO.DURACION };
 const MODOS_BONUS = ["interferencias", "ciudad", "radio"];
 const PUNTOS_ESTACION = 100;
@@ -99,7 +99,7 @@ const partidas = new Map();
 function crearPartida(ajustes) {
   const tiempo = [20, 30].includes(Number(ajustes.tiempo)) ? Number(ajustes.tiempo) : 20;
   const conBonus = ajustes.bonus !== false;
-  // 20 rondas: con bonus, 3 preguntas y luego 1 bonus (15 preguntas + 5 bonus); sin bonus, 20 preguntas.
+  // 13 rondas: con bonus, 3 preguntas y luego 1 bonus (10 preguntas + 3 bonus); sin bonus, 13 preguntas.
   const seleccion = barajar(PREGUNTAS);
   const rondas = [];
   let bonus = 0, numero = 0;

@@ -103,8 +103,8 @@
   });
   function resumenRondas() {
     var conBonus = $("con-bonus").checked;
-    var minutos = (conBonus ? 12 : 13) + ($("tiempo-30").checked ? 3 : 0);
-    $("resumen-rondas").textContent = (conBonus ? "15 preguntas y 5 bonus" : "20 preguntas, sin bonus") + " · unos " + minutos + " minutos";
+    var minutos = 7 + ($("tiempo-30").checked ? 2 : 0);
+    $("resumen-rondas").textContent = (conBonus ? "10 preguntas y 3 bonus" : "13 preguntas, sin bonus") + " · unos " + minutos + " minutos";
   }
   ["con-bonus", "tiempo-20", "tiempo-30"].forEach(function (id) { $(id).addEventListener("change", resumenRondas); });
   resumenRondas();
